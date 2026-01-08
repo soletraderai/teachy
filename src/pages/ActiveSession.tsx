@@ -1,0 +1,364 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import ProgressBar from '../components/ui/ProgressBar';
+import Toast from '../components/ui/Toast';
+import { useSessionStore } from '../stores/sessionStore';
+
+type SessionPhase = 'question' | 'feedback' | 'summary';
+
+export default function ActiveSession() {
+  const { sessionId } = useParams();
+  const navigate = useNavigate();
+  const {
+    getSession,
+    currentSession,
+    setCurrentSession,
+    updateSession,
+    updateTopic,
+    updateQuestion,
+    updateScore,
+  } = useSessionStore();
+
+  const [phase, setPhase] = useState<SessionPhase>('question');
+  const [answer, setAnswer] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const session = sessionId ? getSession(sessionId) : undefined;
+
+  useEffect(() => {
+    if (session && session.status !== 'completed') {
+      setCurrentSession(session);
+    }
+  }, [session, setCurrentSession]);
+
+  // Redirect if session not found or already completed
+  if (!session) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Card className="text-center py-12 max-w-md">
+          <div className="space-y-4">
+            <h1 className="font-heading text-2xl font-bold text-text">
+              Session Not Found
+            </h1>
+            <p className="text-text/70">
+              This session doesn't exist or has been deleted.
+            </p>
+            <Button onClick={() => navigate('/')}>
+              Start New Session
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (session.status === 'completed') {
+    navigate(`/session/${sessionId}/notes`);
+    return null;
+  }
+
+  const currentTopicIndex = session.currentTopicIndex || 0;
+  const currentQuestionIndex = session.currentQuestionIndex || 0;
+  const currentTopic = session.topics[currentTopicIndex];
+  const currentQuestion = currentTopic?.questions[currentQuestionIndex];
+
+  const totalTopics = session.topics.length;
+  const completedTopics = session.topics.filter((t) => t.completed || t.skipped).length;
+
+  // Handle answer submission
+  const handleSubmitAnswer = async () => {
+    if (!answer.trim()) {
+      setToast({ message: 'Please enter an answer', type: 'error' });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // TODO: Call Gemini API for feedback
+      // For now, simulate feedback generation
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const mockFeedback = `Good thinking! Your answer touches on key aspects of the topic.
+        Consider also thinking about how this relates to the broader context discussed in the video.`;
+
+      // Update question with answer and feedback
+      updateQuestion(session.id, currentTopicIndex, currentQuestionIndex, {
+        userAnswer: answer,
+        feedback: mockFeedback,
+        answeredAt: Date.now(),
+      });
+
+      // Update score
+      updateScore(session.id, {
+        questionsAnswered: session.score.questionsAnswered + 1,
+      });
+
+      setPhase('feedback');
+    } catch (err) {
+      setToast({ message: 'Failed to process answer. Please try again.', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle continue to summary
+  const handleContinueToSummary = () => {
+    setPhase('summary');
+  };
+
+  // Handle continue to next topic
+  const handleContinue = () => {
+    // Mark current topic as completed
+    updateTopic(session.id, currentTopicIndex, { completed: true });
+    updateScore(session.id, {
+      topicsCompleted: session.score.topicsCompleted + 1,
+    });
+
+    // Move to next topic
+    moveToNextTopic();
+  };
+
+  // Handle skip
+  const handleSkip = () => {
+    updateTopic(session.id, currentTopicIndex, { skipped: true });
+    updateScore(session.id, {
+      topicsSkipped: session.score.topicsSkipped + 1,
+    });
+
+    moveToNextTopic();
+  };
+
+  // Handle bookmark
+  const handleBookmark = () => {
+    const newBookmarked = !currentTopic.bookmarked;
+    updateTopic(session.id, currentTopicIndex, { bookmarked: newBookmarked });
+
+    updateScore(session.id, {
+      bookmarkedTopics: newBookmarked
+        ? session.score.bookmarkedTopics + 1
+        : session.score.bookmarkedTopics - 1,
+    });
+
+    setToast({
+      message: newBookmarked ? 'Topic bookmarked!' : 'Bookmark removed',
+      type: 'success',
+    });
+  };
+
+  // Handle dig deeper
+  const handleDigDeeper = () => {
+    setToast({ message: 'Dig Deeper mode coming soon!', type: 'info' });
+    // TODO: Implement dig deeper modal/page
+  };
+
+  // Handle difficulty change
+  const handleDifficultyChange = (difficulty: 'easier' | 'harder') => {
+    updateSession(session.id, { difficulty });
+    setToast({ message: `Difficulty set to ${difficulty}`, type: 'info' });
+  };
+
+  // Move to next topic or complete session
+  const moveToNextTopic = () => {
+    const nextIndex = currentTopicIndex + 1;
+
+    if (nextIndex >= session.topics.length) {
+      // Session complete
+      updateSession(session.id, {
+        status: 'completed',
+        completedAt: Date.now(),
+      });
+      navigate(`/session/${sessionId}/notes`);
+    } else {
+      // Move to next topic
+      updateSession(session.id, {
+        currentTopicIndex: nextIndex,
+        currentQuestionIndex: 0,
+      });
+      setPhase('question');
+      setAnswer('');
+    }
+  };
+
+  // Handle end session early
+  const handleEndSession = () => {
+    if (window.confirm('Are you sure you want to end this session? Your progress will be saved.')) {
+      updateSession(session.id, {
+        status: 'completed',
+        completedAt: Date.now(),
+      });
+      navigate(`/session/${sessionId}/notes`);
+    }
+  };
+
+  if (!currentTopic || !currentQuestion) {
+    return (
+      <Card className="text-center py-12">
+        <p>No more topics available.</p>
+        <Button onClick={() => navigate(`/session/${sessionId}/notes`)}>
+          View Session Notes
+        </Button>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Progress Header */}
+      <Card>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="font-heading text-xl font-bold text-text">
+              Topic {currentTopicIndex + 1} of {totalTopics}
+            </h1>
+            <p className="text-sm text-text/70">{currentTopic.title}</p>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant={session.difficulty === 'easier' ? 'primary' : 'ghost'}
+              onClick={() => handleDifficultyChange('easier')}
+            >
+              Easier
+            </Button>
+            <Button
+              size="sm"
+              variant={session.difficulty === 'harder' ? 'primary' : 'ghost'}
+              onClick={() => handleDifficultyChange('harder')}
+            >
+              Harder
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <ProgressBar
+            current={completedTopics}
+            total={totalTopics}
+            label="Progress"
+          />
+        </div>
+      </Card>
+
+      {/* Question Phase */}
+      {phase === 'question' && (
+        <Card>
+          <div className="space-y-6">
+            <div>
+              <h2 className="font-heading text-lg font-bold text-text mb-2">
+                Question
+              </h2>
+              <p className="text-text text-lg">{currentQuestion.text}</p>
+            </div>
+
+            <div>
+              <label
+                htmlFor="answer"
+                className="block font-heading font-semibold text-text mb-2"
+              >
+                Your Answer
+              </label>
+              <textarea
+                id="answer"
+                className="w-full p-4 border-3 border-border bg-surface font-body text-text min-h-[150px] focus:outline-none focus:shadow-brutal"
+                placeholder="Type your answer here..."
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                onClick={handleSubmitAnswer}
+                loading={loading}
+                disabled={loading || !answer.trim()}
+                className="flex-1"
+              >
+                Submit Answer
+              </Button>
+              <Button variant="ghost" onClick={handleSkip} disabled={loading}>
+                Skip
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Feedback Phase */}
+      {phase === 'feedback' && currentQuestion.feedback && (
+        <Card>
+          <div className="space-y-6">
+            <div>
+              <h2 className="font-heading text-lg font-bold text-text mb-2">
+                Your Answer
+              </h2>
+              <p className="text-text bg-surface p-3 border-2 border-border">
+                {currentQuestion.userAnswer}
+              </p>
+            </div>
+
+            <div>
+              <h2 className="font-heading text-lg font-bold text-success mb-2">
+                Feedback
+              </h2>
+              <p className="text-text">{currentQuestion.feedback}</p>
+            </div>
+
+            <Button onClick={handleContinueToSummary} className="w-full">
+              Continue to Summary
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Summary Phase */}
+      {phase === 'summary' && (
+        <Card>
+          <div className="space-y-6">
+            <div>
+              <h2 className="font-heading text-lg font-bold text-secondary mb-2">
+                Topic Summary
+              </h2>
+              <p className="text-text">{currentTopic.summary}</p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button onClick={handleContinue} className="flex-1">
+                Continue
+              </Button>
+              <Button
+                variant={currentTopic.bookmarked ? 'secondary' : 'ghost'}
+                onClick={handleBookmark}
+              >
+                {currentTopic.bookmarked ? 'Bookmarked' : 'Bookmark'}
+              </Button>
+              <Button variant="ghost" onClick={handleDigDeeper}>
+                Dig Deeper
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* End Session Button */}
+      <div className="text-center">
+        <Button variant="ghost" size="sm" onClick={handleEndSession}>
+          End Session Early
+        </Button>
+      </div>
+    </div>
+  );
+}
