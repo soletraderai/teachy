@@ -404,8 +404,16 @@ export async function evaluateAnswer(
   apiKey: string,
   topic: Topic,
   question: Question,
-  userAnswer: string
+  userAnswer: string,
+  difficulty: 'standard' | 'easier' | 'harder' = 'standard'
 ): Promise<string> {
+  // Adjust evaluation criteria based on difficulty
+  const difficultyInstructions = {
+    easier: `The student is working at an easier difficulty level. Be more supportive and encouraging. Focus on the core understanding and don't be too strict about missing details. Highlight what they got right and provide gentle guidance.`,
+    standard: `Evaluate the answer at a standard difficulty level. Balance encouragement with constructive feedback. Acknowledge correct understanding while pointing out areas for improvement.`,
+    harder: `The student is working at a harder difficulty level. Be more rigorous in your evaluation. Expect deeper understanding and more comprehensive answers. Challenge them to think more critically while still being encouraging.`,
+  };
+
   const prompt = `You are an educational assistant evaluating a student's answer.
 
 Topic: ${topic.title}
@@ -414,6 +422,9 @@ Context: ${topic.summary}
 Question: ${question.text}
 
 Student's Answer: ${userAnswer}
+
+Difficulty Level: ${difficulty.toUpperCase()}
+${difficultyInstructions[difficulty]}
 
 Please evaluate the answer and provide constructive feedback:
 1. Acknowledge what the student got right
@@ -439,6 +450,21 @@ export async function generateAlternateQuestion(
   currentQuestion: Question,
   difficulty: 'easier' | 'harder'
 ): Promise<string> {
+  const difficultyGuidelines = {
+    easier: `Generate a SIMPLER question that:
+- Uses basic vocabulary and straightforward language
+- Focuses on one clear concept at a time
+- Can be answered with fundamental understanding
+- Doesn't require prior expertise or deep analysis
+- Is encouraging and accessible for beginners`,
+    harder: `Generate a MORE CHALLENGING question that:
+- Requires critical thinking and analysis
+- May combine multiple concepts
+- Expects deeper understanding and application
+- Could involve real-world scenarios or edge cases
+- Pushes the learner to think beyond surface-level understanding`,
+  };
+
   const prompt = `Generate a ${difficulty} question about this topic:
 
 Topic: ${topic.title}
@@ -446,7 +472,7 @@ Summary: ${topic.summary}
 
 Current question (${currentQuestion.difficulty}): ${currentQuestion.text}
 
-Please generate a ${difficulty === 'easier' ? 'simpler, more straightforward' : 'more challenging, deeper'} question about the same topic.
+${difficultyGuidelines[difficulty]}
 
 Return ONLY the question text, nothing else.`;
 

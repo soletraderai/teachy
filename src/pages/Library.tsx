@@ -18,6 +18,8 @@ export default function Library() {
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>(
     (searchParams.get('sort') as 'newest' | 'oldest') || 'newest'
   );
+  const [dateFrom, setDateFrom] = useState(searchParams.get('dateFrom') || '');
+  const [dateTo, setDateTo] = useState(searchParams.get('dateTo') || '');
 
   // Filter and sort sessions
   const filteredSessions = useMemo(() => {
@@ -43,6 +45,25 @@ export default function Library() {
       );
     }
 
+    // Apply date range filter
+    if (dateFrom) {
+      const fromDate = new Date(dateFrom);
+      fromDate.setHours(0, 0, 0, 0); // Start of day in local timezone
+      sessions = sessions.filter((session) => {
+        const sessionDate = new Date(session.createdAt);
+        return sessionDate >= fromDate;
+      });
+    }
+
+    if (dateTo) {
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999); // End of day in local timezone
+      sessions = sessions.filter((session) => {
+        const sessionDate = new Date(session.createdAt);
+        return sessionDate <= toDate;
+      });
+    }
+
     // Apply sorting
     sessions.sort((a, b) => {
       if (sortOrder === 'newest') {
@@ -52,18 +73,28 @@ export default function Library() {
     });
 
     return sessions;
-  }, [library.sessions, search, filterBookmarked, sortOrder]);
+  }, [library.sessions, search, filterBookmarked, sortOrder, dateFrom, dateTo]);
 
   // Update URL params when filters change
-  const updateParams = (newSearch?: string, newBookmarked?: boolean, newSort?: 'newest' | 'oldest') => {
+  const updateParams = (
+    newSearch?: string,
+    newBookmarked?: boolean,
+    newSort?: 'newest' | 'oldest',
+    newDateFrom?: string,
+    newDateTo?: string
+  ) => {
     const params = new URLSearchParams();
     const searchValue = newSearch !== undefined ? newSearch : search;
     const bookmarkedValue = newBookmarked !== undefined ? newBookmarked : filterBookmarked;
     const sortValue = newSort !== undefined ? newSort : sortOrder;
+    const dateFromValue = newDateFrom !== undefined ? newDateFrom : dateFrom;
+    const dateToValue = newDateTo !== undefined ? newDateTo : dateTo;
 
     if (searchValue) params.set('search', searchValue);
     if (bookmarkedValue) params.set('bookmarked', 'true');
     if (sortValue !== 'newest') params.set('sort', sortValue);
+    if (dateFromValue) params.set('dateFrom', dateFromValue);
+    if (dateToValue) params.set('dateTo', dateToValue);
 
     setSearchParams(params);
   };
@@ -84,14 +115,26 @@ export default function Library() {
     updateParams(undefined, undefined, newSort);
   };
 
+  const handleDateFromChange = (value: string) => {
+    setDateFrom(value);
+    updateParams(undefined, undefined, undefined, value);
+  };
+
+  const handleDateToChange = (value: string) => {
+    setDateTo(value);
+    updateParams(undefined, undefined, undefined, undefined, value);
+  };
+
   const clearFilters = () => {
     setSearch('');
     setFilterBookmarked(false);
     setSortOrder('newest');
+    setDateFrom('');
+    setDateTo('');
     setSearchParams({});
   };
 
-  const hasActiveFilters = search.trim() || filterBookmarked || sortOrder !== 'newest';
+  const hasActiveFilters = search.trim() || filterBookmarked || sortOrder !== 'newest' || dateFrom || dateTo;
 
   return (
     <div className="space-y-6">
@@ -142,6 +185,59 @@ export default function Library() {
               </Button>
             )}
           </div>
+        </div>
+
+        {/* Date Range Filter */}
+        <div className="flex flex-col sm:flex-row gap-4 items-end">
+          <div className="flex-1 min-w-0">
+            <label
+              htmlFor="date-from"
+              className="block font-heading font-semibold text-text text-sm mb-1"
+            >
+              From Date
+            </label>
+            <input
+              id="date-from"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => handleDateFromChange(e.target.value)}
+              max={dateTo || undefined}
+              className="w-full px-4 py-2 border-3 border-border bg-surface font-body text-text
+                focus:outline-none focus:shadow-brutal transition-shadow"
+              aria-label="Filter from date"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <label
+              htmlFor="date-to"
+              className="block font-heading font-semibold text-text text-sm mb-1"
+            >
+              To Date
+            </label>
+            <input
+              id="date-to"
+              type="date"
+              value={dateTo}
+              onChange={(e) => handleDateToChange(e.target.value)}
+              min={dateFrom || undefined}
+              className="w-full px-4 py-2 border-3 border-border bg-surface font-body text-text
+                focus:outline-none focus:shadow-brutal transition-shadow"
+              aria-label="Filter to date"
+            />
+          </div>
+          {(dateFrom || dateTo) && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setDateFrom('');
+                setDateTo('');
+                updateParams(undefined, undefined, undefined, '', '');
+              }}
+              className="whitespace-nowrap"
+            >
+              Clear Dates
+            </Button>
+          )}
         </div>
 
         {/* Results count */}

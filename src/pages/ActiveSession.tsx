@@ -135,7 +135,8 @@ export default function ActiveSession() {
             settings.geminiApiKey,
             currentTopic,
             currentQuestion,
-            answer
+            answer,
+            session.difficulty || 'standard'
           );
         } catch (apiError) {
           console.error('Gemini API error:', apiError);
