@@ -21,36 +21,32 @@ export function extractVideoId(url: string): string | null {
 export async function fetchVideoMetadata(videoId: string): Promise<VideoMetadata> {
   const url = `https://www.youtube.com/watch?v=${videoId}`;
 
-  try {
-    // Use oEmbed API for basic metadata (no API key required)
-    const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
-    const response = await fetch(oembedUrl);
+  // Use oEmbed API for basic metadata (no API key required)
+  const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
+  const response = await fetch(oembedUrl);
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch video metadata: ${response.status}`);
+  if (!response.ok) {
+    // 401/403 typically means the video is private
+    // 404 means the video doesn't exist or has been deleted
+    // 400 can also indicate an invalid/unavailable video
+    if (response.status === 401 || response.status === 403) {
+      throw new Error('This video is private. Please try a public video.');
+    } else if (response.status === 404 || response.status === 400) {
+      throw new Error('This video is unavailable. It may have been deleted or does not exist.');
     }
-
-    const data = await response.json();
-
-    return {
-      url: url,
-      title: data.title || 'Untitled Video',
-      thumbnailUrl: data.thumbnail_url || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-      duration: 0, // oEmbed doesn't provide duration, will be estimated from transcript
-      channel: data.author_name || 'Unknown Channel',
-      publishDate: undefined, // Not available from oEmbed
-    };
-  } catch (error) {
-    console.error('Error fetching video metadata:', error);
-    // Fallback to basic info
-    return {
-      url: url,
-      title: 'Video',
-      thumbnailUrl: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-      duration: 0,
-      channel: 'YouTube',
-    };
+    throw new Error(`Failed to fetch video information (${response.status}). Please try a different video.`);
   }
+
+  const data = await response.json();
+
+  return {
+    url: url,
+    title: data.title || 'Untitled Video',
+    thumbnailUrl: data.thumbnail_url || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+    duration: 0, // oEmbed doesn't provide duration, will be estimated from transcript
+    channel: data.author_name || 'Unknown Channel',
+    publishDate: undefined, // Not available from oEmbed
+  };
 }
 
 // Fetch transcript using a public transcript service

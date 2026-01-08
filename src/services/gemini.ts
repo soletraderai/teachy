@@ -17,6 +17,17 @@ interface GeminiResponse {
   };
 }
 
+// Custom error class for rate limiting
+export class RateLimitError extends Error {
+  retryAfter: number;
+
+  constructor(message: string, retryAfter: number = 60) {
+    super(message);
+    this.name = 'RateLimitError';
+    this.retryAfter = retryAfter;
+  }
+}
+
 // Make a request to Gemini API
 async function callGemini(apiKey: string, prompt: string): Promise<string> {
   const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
@@ -41,14 +52,41 @@ async function callGemini(apiKey: string, prompt: string): Promise<string> {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+
+    // Handle rate limiting specifically (HTTP 429)
+    if (response.status === 429) {
+      const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
+      throw new RateLimitError(
+        `Rate limit exceeded. Please wait ${retryAfter} seconds before trying again.`,
+        retryAfter
+      );
+    }
+
+    // Handle quota exceeded (common Gemini error for rate limits)
+    const errorMessage = errorData.error?.message || response.statusText;
+    if (errorMessage.toLowerCase().includes('quota') || errorMessage.toLowerCase().includes('rate')) {
+      throw new RateLimitError(
+        'API quota exceeded. Please wait a few minutes before trying again.',
+        60
+      );
+    }
+
     throw new Error(
-      `Gemini API error: ${response.status} - ${errorData.error?.message || response.statusText}`
+      `Gemini API error: ${response.status} - ${errorMessage}`
     );
   }
 
   const data: GeminiResponse = await response.json();
 
   if (data.error) {
+    // Check for rate limit errors in response body
+    if (data.error.message.toLowerCase().includes('quota') ||
+        data.error.message.toLowerCase().includes('rate')) {
+      throw new RateLimitError(
+        'API rate limit reached. Please wait a few minutes before trying again.',
+        60
+      );
+    }
     throw new Error(`Gemini API error: ${data.error.message}`);
   }
 

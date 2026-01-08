@@ -8,6 +8,8 @@ import ProgressBar from '../components/ui/ProgressBar';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useSessionStore } from '../stores/sessionStore';
 import { createSession } from '../services/session';
+import { RateLimitError } from '../services/gemini';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import type { ProcessingState } from '../types';
 
 export default function Home() {
@@ -20,6 +22,7 @@ export default function Home() {
   const navigate = useNavigate();
   const { settings, isConfigured } = useSettingsStore();
   const { library, createSession: saveSession } = useSessionStore();
+  const isOnline = useOnlineStatus();
 
   // Get recent sessions (last 5)
   const recentSessions = library.sessions.slice(0, 5);
@@ -41,6 +44,13 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Check if online
+    if (!isOnline) {
+      setError('You are offline. Please connect to the internet to start a new session.');
+      setToast({ message: 'You are offline. Please connect to the internet.', type: 'error' });
+      return;
+    }
 
     // Check if settings are configured
     if (!isConfigured()) {
@@ -87,7 +97,15 @@ export default function Home() {
         navigate(`/session/${session.id}/overview`);
       }, 500);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to process video';
+      let errorMessage: string;
+
+      // Handle rate limit errors specifically with retry guidance
+      if (err instanceof RateLimitError) {
+        errorMessage = `${err.message} Please wait ${err.retryAfter} seconds before trying again.`;
+      } else {
+        errorMessage = err instanceof Error ? err.message : 'Failed to process video';
+      }
+
       setError(errorMessage);
       setToast({ message: errorMessage, type: 'error' });
       setProcessingState(null);
@@ -186,6 +204,7 @@ export default function Home() {
                     src={session.video.thumbnailUrl}
                     alt={`Thumbnail for ${session.video.title}`}
                     className="w-full h-32 object-cover border-3 border-border mb-4"
+                    loading="lazy"
                   />
                 )}
 

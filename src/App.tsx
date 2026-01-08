@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/ui/Layout';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 import Home from './pages/Home';
 import Settings from './pages/Settings';
 import Library from './pages/Library';
@@ -10,20 +11,22 @@ import NotFound from './pages/NotFound';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="library" element={<Library />} />
-          <Route path="session/:sessionId/overview" element={<SessionOverview />} />
-          <Route path="session/:sessionId/active" element={<ActiveSession />} />
-          <Route path="session/:sessionId/notes" element={<SessionNotes />} />
-          <Route path="404" element={<NotFound />} />
-          <Route path="*" element={<Navigate to="/404" replace />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Home />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="library" element={<Library />} />
+            <Route path="session/:sessionId/overview" element={<SessionOverview />} />
+            <Route path="session/:sessionId/active" element={<ActiveSession />} />
+            <Route path="session/:sessionId/notes" element={<SessionNotes />} />
+            <Route path="404" element={<NotFound />} />
+            <Route path="*" element={<Navigate to="/404" replace />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

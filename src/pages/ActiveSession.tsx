@@ -6,7 +6,7 @@ import ProgressBar from '../components/ui/ProgressBar';
 import Toast from '../components/ui/Toast';
 import { useSessionStore } from '../stores/sessionStore';
 import { useSettingsStore } from '../stores/settingsStore';
-import { evaluateAnswer } from '../services/gemini';
+import { evaluateAnswer, RateLimitError } from '../services/gemini';
 
 type SessionPhase = 'question' | 'feedback' | 'summary';
 
@@ -136,6 +136,13 @@ export default function ActiveSession() {
           );
         } catch (apiError) {
           console.error('Gemini API error:', apiError);
+          // Handle rate limit errors specifically
+          if (apiError instanceof RateLimitError) {
+            setToast({
+              message: `${apiError.message} You can continue with generic feedback for now.`,
+              type: 'error',
+            });
+          }
           // Fallback to generic feedback if API fails
           feedback = `Thank you for your answer! You've made a thoughtful response about "${currentTopic.title}". Consider reviewing the topic summary for additional insights.`;
         }
@@ -336,7 +343,13 @@ export default function ActiveSession() {
                 value={answer}
                 onChange={(e) => setAnswer(e.target.value)}
                 disabled={loading}
+                maxLength={5000}
               />
+              {answer.length > 4500 && (
+                <p className="text-xs text-error mt-1">
+                  {5000 - answer.length} characters remaining
+                </p>
+              )}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">

@@ -167,6 +167,7 @@ export default function Library() {
                   src={session.video.thumbnailUrl}
                   alt={`Thumbnail for ${session.video.title}`}
                   className="w-full h-36 object-cover border-3 border-border mb-4"
+                  loading="lazy"
                 />
               )}
 
