@@ -161,8 +161,108 @@ app.get('/api/transcript/:videoId', async (req, res) => {
   }
 });
 
+// Server-side validation endpoint for settings
+app.post('/api/validate/settings', (req, res) => {
+  const { userName, geminiApiKey, language } = req.body;
+  const errors = {};
+
+  console.log(`[Validation API] Validating settings:`, { userName: userName ? '***' : 'empty', geminiApiKey: geminiApiKey ? '***' : 'empty', language });
+
+  // Username validation
+  if (!userName || typeof userName !== 'string') {
+    errors.userName = 'Username is required';
+  } else {
+    const trimmedName = userName.trim();
+    if (!trimmedName) {
+      errors.userName = 'Username cannot be empty or whitespace only';
+    } else if (trimmedName.length > 50) {
+      errors.userName = 'Username must be 50 characters or less';
+    }
+  }
+
+  // API Key validation
+  if (!geminiApiKey || typeof geminiApiKey !== 'string') {
+    errors.geminiApiKey = 'API key is required';
+  } else {
+    const trimmedKey = geminiApiKey.trim();
+    if (!trimmedKey) {
+      errors.geminiApiKey = 'API key cannot be empty or whitespace only';
+    } else if (trimmedKey.length < 10) {
+      errors.geminiApiKey = 'API key seems too short';
+    }
+  }
+
+  // Language validation
+  const validLanguages = ['en', 'es', 'fr', 'de', 'pt', 'ja', 'ko', 'zh'];
+  if (!language || typeof language !== 'string') {
+    errors.language = 'Language is required';
+  } else if (!validLanguages.includes(language)) {
+    errors.language = 'Invalid language selection';
+  }
+
+  if (Object.keys(errors).length > 0) {
+    console.log(`[Validation API] Validation failed:`, errors);
+    return res.status(400).json({
+      error: 'Validation failed',
+      errors
+    });
+  }
+
+  console.log(`[Validation API] Validation passed`);
+  res.json({
+    success: true,
+    message: 'Settings are valid'
+  });
+});
+
+// Server-side validation endpoint for YouTube URL
+app.post('/api/validate/youtube-url', (req, res) => {
+  const { url } = req.body;
+
+  console.log(`[Validation API] Validating YouTube URL:`, url);
+
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({
+      error: 'Validation failed',
+      errors: { url: 'URL is required' }
+    });
+  }
+
+  const trimmedUrl = url.trim();
+  if (!trimmedUrl) {
+    return res.status(400).json({
+      error: 'Validation failed',
+      errors: { url: 'URL cannot be empty or whitespace only' }
+    });
+  }
+
+  // Match various YouTube URL formats
+  const youtubePatterns = [
+    /^https?:\/\/(www\.)?youtube\.com\/watch\?v=[\w-]+/,
+    /^https?:\/\/youtu\.be\/[\w-]+/,
+    /^https?:\/\/(www\.)?youtube\.com\/embed\/[\w-]+/,
+  ];
+
+  const isValidYouTube = youtubePatterns.some((pattern) => pattern.test(trimmedUrl));
+
+  if (!isValidYouTube) {
+    console.log(`[Validation API] Invalid YouTube URL`);
+    return res.status(400).json({
+      error: 'Validation failed',
+      errors: { url: 'Please enter a valid YouTube URL (youtube.com/watch?v=... or youtu.be/...)' }
+    });
+  }
+
+  console.log(`[Validation API] YouTube URL is valid`);
+  res.json({
+    success: true,
+    message: 'YouTube URL is valid'
+  });
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`[Transcript Proxy] Server running on http://localhost:${PORT}`);
   console.log(`[Transcript Proxy] API endpoint: http://localhost:${PORT}/api/transcript/:videoId`);
+  console.log(`[Transcript Proxy] Validation endpoints: /api/validate/settings, /api/validate/youtube-url`);
 });

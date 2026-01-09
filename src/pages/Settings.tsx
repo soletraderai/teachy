@@ -86,6 +86,7 @@ export default function Settings() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Client-side validation first
     if (!validateForm()) {
       setToast({ message: 'Please fix the errors above', type: 'error' });
       return;
@@ -94,7 +95,32 @@ export default function Settings() {
     setLoading(true);
 
     try {
-      // Save settings
+      // Server-side validation fallback
+      const validationResponse = await fetch('http://localhost:3001/api/validate/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userName: formData.userName,
+          geminiApiKey: formData.geminiApiKey,
+          language: formData.language,
+        }),
+      });
+
+      const validationResult = await validationResponse.json();
+
+      if (!validationResponse.ok) {
+        // Server returned validation errors
+        if (validationResult.errors) {
+          setErrors(validationResult.errors);
+          setToast({ message: 'Server validation failed. Please fix the errors above.', type: 'error' });
+          return;
+        }
+        throw new Error(validationResult.error || 'Server validation failed');
+      }
+
+      // Save settings after server validation passes
       setSettings({
         userName: formData.userName.trim(),
         geminiApiKey: formData.geminiApiKey.trim(),
@@ -104,7 +130,19 @@ export default function Settings() {
       setToast({ message: 'Settings saved successfully!', type: 'success' });
       setIsDirty(false);
     } catch (err) {
-      setToast({ message: 'Failed to save settings', type: 'error' });
+      // If server is unavailable, fall back to client validation (which already passed)
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        // Network error - server unavailable, proceed with client-only validation
+        setSettings({
+          userName: formData.userName.trim(),
+          geminiApiKey: formData.geminiApiKey.trim(),
+          language: formData.language,
+        });
+        setToast({ message: 'Settings saved successfully!', type: 'success' });
+        setIsDirty(false);
+      } else {
+        setToast({ message: err instanceof Error ? err.message : 'Failed to save settings', type: 'error' });
+      }
     } finally {
       setLoading(false);
     }
