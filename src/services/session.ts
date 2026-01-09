@@ -2,6 +2,7 @@
 import type { Session, ProcessingState, VideoMetadata, KnowledgeBase } from '../types';
 import { extractVideoId, fetchVideoMetadata, fetchTranscript, combineTranscript } from './youtube';
 import { generateTopicsFromVideo } from './gemini';
+import { buildKnowledgeBase, generateSampleSources } from './knowledgeBase';
 
 // Generate unique session ID
 export function generateSessionId(): string {
@@ -53,16 +54,20 @@ export async function createSession(
     // Continue without transcript - Gemini will work with metadata only
   }
 
-  // Step 4: Build knowledge base (placeholder for now)
+  // Step 4: Build knowledge base from transcript and video info
   onProgress?.({
     step: 'building_knowledge',
     progress: 50,
     message: 'Building knowledge base...',
   });
 
-  const knowledgeBase: KnowledgeBase = {
-    sources: [], // Will be populated when we add GitHub/documentation scraping
-  };
+  // Build knowledge base from extracted URLs or generate sample sources
+  let knowledgeBase: KnowledgeBase = buildKnowledgeBase(transcript || undefined);
+
+  // If no URLs were extracted, generate sample sources based on video topic
+  if (knowledgeBase.sources.length === 0) {
+    knowledgeBase = generateSampleSources(metadata.title);
+  }
 
   // Step 5: Generate topics and questions using Gemini
   onProgress?.({

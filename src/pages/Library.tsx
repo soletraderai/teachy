@@ -389,12 +389,6 @@ export default function Library() {
                   page === totalPages ||
                   Math.abs(page - currentPage) <= 1;
 
-                // Show ellipsis
-                const showEllipsisBefore =
-                  page === currentPage - 1 && currentPage > 3;
-                const showEllipsisAfter =
-                  page === currentPage + 1 && currentPage < totalPages - 2;
-
                 if (!showPage) {
                   if (
                     (page === 2 && currentPage > 3) ||
