@@ -443,6 +443,49 @@ Provide a concise response (2-4 sentences). Start with an assessment of their an
   }
 }
 
+// Generate fallback deeper questions when API is unavailable
+function generateFallbackDeeperQuestion(topic: Topic, currentQuestion: Question, difficulty: 'easier' | 'harder'): string {
+  const topicTitle = topic.title;
+
+  // Templates for harder/deeper questions
+  const harderTemplates = [
+    `How would you compare and contrast different approaches to "${topicTitle}"?`,
+    `What potential challenges or limitations might arise when applying concepts from "${topicTitle}" in real-world scenarios?`,
+    `How does "${topicTitle}" connect to other related concepts you might already know?`,
+    `What would be the consequences if the key principles of "${topicTitle}" were applied incorrectly?`,
+    `Can you analyze the strengths and weaknesses of the main concepts in "${topicTitle}"?`,
+    `How might the ideas from "${topicTitle}" evolve or change in the future?`,
+    `What assumptions underlie the concepts discussed in "${topicTitle}"?`,
+    `How would you teach the core concepts of "${topicTitle}" to someone completely new to the subject?`,
+    `What are some edge cases or exceptions to consider when applying knowledge from "${topicTitle}"?`,
+    `How do experts in this field approach "${topicTitle}" differently than beginners?`,
+  ];
+
+  // Templates for easier questions
+  const easierTemplates = [
+    `What is the main idea behind "${topicTitle}"?`,
+    `Can you give a simple example related to "${topicTitle}"?`,
+    `Why is "${topicTitle}" important to understand?`,
+    `What's one key thing you should remember about "${topicTitle}"?`,
+    `How would you describe "${topicTitle}" in your own words?`,
+    `What's the first step to understanding "${topicTitle}"?`,
+    `What do you find most interesting about "${topicTitle}"?`,
+    `How does "${topicTitle}" relate to everyday life?`,
+    `What's the simplest way to explain "${topicTitle}"?`,
+    `What questions do you have about "${topicTitle}"?`,
+  ];
+
+  const templates = difficulty === 'harder' ? harderTemplates : easierTemplates;
+
+  // Avoid returning the exact same question
+  const currentText = currentQuestion.text.toLowerCase();
+  const availableTemplates = templates.filter(t => !t.toLowerCase().includes(currentText.slice(0, 20).toLowerCase()));
+
+  // Select a random question from available templates
+  const randomIndex = Math.floor(Math.random() * (availableTemplates.length || templates.length));
+  return (availableTemplates.length > 0 ? availableTemplates : templates)[randomIndex];
+}
+
 // Generate a new question with different difficulty
 export async function generateAlternateQuestion(
   apiKey: string,
@@ -481,7 +524,9 @@ Return ONLY the question text, nothing else.`;
     return response.trim();
   } catch (error) {
     console.error('Error generating question:', error);
-    throw new Error(`Failed to generate question: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    // Fallback to local question generation when API fails
+    console.log('Using fallback question generation');
+    return generateFallbackDeeperQuestion(topic, currentQuestion, difficulty);
   }
 }
 
