@@ -399,6 +399,84 @@ The estimatedDuration should be in minutes. Make questions thought-provoking and
   }
 }
 
+// Generate contextual fallback feedback when API is unavailable
+export function generateFallbackFeedback(
+  topic: Topic,
+  _question: Question,
+  userAnswer: string,
+  difficulty: 'standard' | 'easier' | 'harder'
+): string {
+  const wordCount = userAnswer.trim().split(/\s+/).length;
+  const topicTitle = topic.title;
+
+  // Analyze answer quality indicators
+  const hasExamples = /example|instance|such as|like|for instance/i.test(userAnswer);
+  const hasExplanation = /because|therefore|since|due to|reason|explain/i.test(userAnswer);
+  const hasComparison = /compare|contrast|similar|different|whereas|while/i.test(userAnswer);
+  const hasQuestions = /\?/.test(userAnswer);
+  const isDetailed = wordCount > 50;
+  const isComprehensive = wordCount > 100;
+  const isMinimal = wordCount < 15;
+
+  // Generate quality score
+  let qualityScore = 0;
+  if (hasExamples) qualityScore += 2;
+  if (hasExplanation) qualityScore += 2;
+  if (hasComparison) qualityScore += 1;
+  if (isDetailed) qualityScore += 1;
+  if (isComprehensive) qualityScore += 2;
+  if (!isMinimal) qualityScore += 1;
+
+  // Adjust for difficulty level
+  const difficultyMultiplier = difficulty === 'harder' ? 0.8 : difficulty === 'easier' ? 1.2 : 1;
+  const adjustedScore = qualityScore * difficultyMultiplier;
+
+  // Generate contextual feedback based on score and characteristics
+  let opener: string;
+  let body: string;
+  let suggestion: string;
+
+  if (adjustedScore >= 6) {
+    // Excellent answer
+    opener = isComprehensive
+      ? "Excellent, comprehensive answer!"
+      : "Great thinking!";
+    body = `You've demonstrated a solid understanding of "${topicTitle}". ${
+      hasExamples ? "Your use of examples helps illustrate the concepts well. " : ""
+    }${hasExplanation ? "Your explanations show critical thinking. " : ""}`;
+    suggestion = difficulty === 'harder'
+      ? "Consider exploring edge cases or alternative perspectives to deepen your understanding further."
+      : "Keep up this level of thoughtful analysis!";
+  } else if (adjustedScore >= 3) {
+    // Good answer
+    opener = "Good effort!";
+    body = `You've touched on some key points about "${topicTitle}". `;
+    if (!hasExamples) {
+      suggestion = "Try including specific examples to strengthen your answer.";
+    } else if (!hasExplanation) {
+      suggestion = "Consider explaining the 'why' behind your points to show deeper understanding.";
+    } else {
+      suggestion = "Review the topic summary for additional insights you might incorporate.";
+    }
+  } else if (isMinimal) {
+    // Minimal answer
+    opener = "Thanks for your response!";
+    body = `You've started to engage with "${topicTitle}". `;
+    suggestion = difficulty === 'easier'
+      ? "Try expanding on your thoughts - even a few more sentences can help reinforce your understanding."
+      : "Consider elaborating more on your answer. What examples can you think of? Why do you think this is important?";
+  } else {
+    // Standard answer
+    opener = "Thank you for your answer!";
+    body = `You've shared your thoughts on "${topicTitle}". `;
+    suggestion = hasQuestions
+      ? "Great that you're asking questions! The topic summary may help address some of them."
+      : "Consider how these concepts might apply to real-world situations.";
+  }
+
+  return `${opener} ${body}${suggestion}`;
+}
+
 // Evaluate user's answer to a question
 export async function evaluateAnswer(
   apiKey: string,

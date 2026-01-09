@@ -7,7 +7,7 @@ import Toast from '../components/ui/Toast';
 import DigDeeperModal from '../components/ui/DigDeeperModal';
 import { useSessionStore } from '../stores/sessionStore';
 import { useSettingsStore } from '../stores/settingsStore';
-import { evaluateAnswer, RateLimitError } from '../services/gemini';
+import { evaluateAnswer, RateLimitError, generateFallbackFeedback } from '../services/gemini';
 import type { ChatMessage } from '../types';
 
 type SessionPhase = 'question' | 'feedback' | 'summary';
@@ -143,16 +143,26 @@ export default function ActiveSession() {
           // Handle rate limit errors specifically
           if (apiError instanceof RateLimitError) {
             setToast({
-              message: `${apiError.message} You can continue with generic feedback for now.`,
+              message: `${apiError.message} You can continue with contextual feedback for now.`,
               type: 'error',
             });
           }
-          // Fallback to generic feedback if API fails
-          feedback = `Thank you for your answer! You've made a thoughtful response about "${currentTopic.title}". Consider reviewing the topic summary for additional insights.`;
+          // Fallback to contextual feedback if API fails
+          feedback = generateFallbackFeedback(
+            currentTopic,
+            currentQuestion,
+            answer,
+            session.difficulty || 'standard'
+          );
         }
       } else {
-        // No API key - use generic feedback
-        feedback = `Thank you for your answer! You've made a thoughtful response about "${currentTopic.title}". Consider reviewing the topic summary for additional insights.`;
+        // No API key - use contextual feedback based on answer quality
+        feedback = generateFallbackFeedback(
+          currentTopic,
+          currentQuestion,
+          answer,
+          session.difficulty || 'standard'
+        );
       }
 
       // Update question with answer and feedback
