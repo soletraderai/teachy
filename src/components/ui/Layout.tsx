@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import ErrorBoundary from './ErrorBoundary';
 import OfflineBanner from './OfflineBanner';
+import Breadcrumb from './Breadcrumb';
 
 export default function Layout() {
   const location = useLocation();
@@ -122,6 +123,7 @@ export default function Layout() {
 
       {/* Main Content */}
       <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Breadcrumb />
         <ErrorBoundary>
           <Outlet />
         </ErrorBoundary>
