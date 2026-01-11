@@ -1,4 +1,4 @@
-import { InputHTMLAttributes, forwardRef, ReactNode } from 'react';
+import { InputHTMLAttributes, forwardRef, ReactNode, useEffect, useState, useRef } from 'react';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -9,6 +9,18 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className = '', label, error, helperText, id, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+    const [shouldShake, setShouldShake] = useState(false);
+    const prevErrorRef = useRef<string | undefined>(undefined);
+
+    // Trigger shake animation when error appears or changes
+    useEffect(() => {
+      if (error && error !== prevErrorRef.current) {
+        setShouldShake(true);
+        const timer = setTimeout(() => setShouldShake(false), 400);
+        return () => clearTimeout(timer);
+      }
+      prevErrorRef.current = error;
+    }, [error]);
 
     return (
       <div className="w-full">
@@ -27,7 +39,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           className={`w-full px-4 py-2 border-3 border-border bg-surface font-body text-text
             focus:outline-none focus:shadow-brutal transition-shadow
             disabled:opacity-60 disabled:cursor-not-allowed
-            ${error ? 'border-error' : ''}
+            ${error ? 'border-error input-error-highlight' : ''}
+            ${shouldShake ? 'input-error-shake' : ''}
             ${className}`}
           aria-invalid={error ? 'true' : 'false'}
           aria-describedby={error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined}
