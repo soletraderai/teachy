@@ -65,8 +65,8 @@ export default function ProgressBar({
       )}
       <div className="h-6 border-3 border-border bg-surface overflow-hidden">
         <div
-          className="h-full bg-primary progress-bar-fill"
-          style={{ width: `${displayPercentage}%` }}
+          className="h-full w-full bg-primary progress-bar-fill origin-left"
+          style={{ transform: `scaleX(${displayPercentage / 100})` }}
         />
       </div>
       {showCount && (
