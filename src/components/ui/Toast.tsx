@@ -8,16 +8,31 @@ interface ToastProps {
 }
 
 export default function Toast({ message, type, duration = 4000, onClose }: ToastProps) {
-  const [isVisible, setIsVisible] = useState(true);
+  const [isEntering, setIsEntering] = useState(true);
+  const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsVisible(false);
-      setTimeout(onClose, 300); // Wait for fade animation
+    // Small delay to trigger enter animation
+    const enterTimer = setTimeout(() => {
+      setIsEntering(false);
+    }, 50);
+
+    // Auto-dismiss timer
+    const dismissTimer = setTimeout(() => {
+      setIsExiting(true);
+      setTimeout(onClose, 300); // Wait for exit animation
     }, duration);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(enterTimer);
+      clearTimeout(dismissTimer);
+    };
   }, [duration, onClose]);
+
+  const handleDismiss = () => {
+    setIsExiting(true);
+    setTimeout(onClose, 300);
+  };
 
   const typeStyles = {
     success: 'bg-success',
@@ -25,11 +40,16 @@ export default function Toast({ message, type, duration = 4000, onClose }: Toast
     info: 'bg-secondary',
   };
 
+  // Animation classes: slide in from right, slide out to right
+  const animationClass = isEntering
+    ? 'translate-x-full opacity-0'
+    : isExiting
+    ? 'translate-x-full opacity-0'
+    : 'translate-x-0 opacity-100';
+
   return (
     <div
-      className={`fixed top-4 right-4 z-50 transition-all duration-300 ${
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
-      }`}
+      className={`fixed top-4 right-4 z-50 transition-all duration-300 ease-out ${animationClass}`}
       role="alert"
       aria-live="polite"
     >
@@ -38,10 +58,7 @@ export default function Toast({ message, type, duration = 4000, onClose }: Toast
       >
         <span>{message}</span>
         <button
-          onClick={() => {
-            setIsVisible(false);
-            setTimeout(onClose, 300);
-          }}
+          onClick={handleDismiss}
           className="hover:opacity-70 transition-opacity"
           aria-label="Dismiss notification"
         >
