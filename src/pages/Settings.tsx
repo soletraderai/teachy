@@ -9,6 +9,33 @@ import { useSettingsStore } from '../stores/settingsStore';
 import { useAuthStore } from '../stores/authStore';
 import type { TutorPersonality } from '../types';
 
+interface LearningModelData {
+  hasData: boolean;
+  message?: string;
+  optimalTime?: string;
+  avgSessionDuration?: number;
+  difficultySweetSpot?: number | null;
+  preferredPacing?: string | null;
+  preferredDevice?: string | null;
+  sessionsAnalyzed?: number;
+  confidenceScore?: number;
+  patterns?: Array<{
+    id: string;
+    patternType: string;
+    patternData: Record<string, unknown>;
+    createdAt: string;
+  }>;
+  signals?: {
+    timeOfDay: boolean;
+    sessionDuration: boolean;
+    difficulty: boolean;
+    pacing: boolean;
+    device: boolean;
+  };
+}
+
+const API_BASE = 'http://localhost:3001/api';
+
 const tutorPersonalityOptions: {
   value: TutorPersonality;
   label: string;
@@ -76,6 +103,37 @@ export default function Settings() {
   const [isDirty, setIsDirty] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [learningModel, setLearningModel] = useState<LearningModelData | null>(null);
+  const [loadingInsights, setLoadingInsights] = useState(false);
+
+  // Fetch learning model data
+  useEffect(() => {
+    const fetchLearningModel = async () => {
+      if (!isAuthenticated()) return;
+
+      setLoadingInsights(true);
+      try {
+        const { accessToken } = useAuthStore.getState();
+        const response = await fetch(`${API_BASE}/learning-model`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setLearningModel(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch learning model:', err);
+      } finally {
+        setLoadingInsights(false);
+      }
+    };
+
+    fetchLearningModel();
+  }, [isAuthenticated]);
 
   // Track if form has unsaved changes
   useEffect(() => {
@@ -363,6 +421,125 @@ export default function Settings() {
           <li>Clear your browser data to remove stored settings</li>
         </ul>
       </Card>
+
+      {/* Learning Insights */}
+      {isAuthenticated() && (
+        <Card className="mt-6">
+          <h2 className="font-heading text-xl font-bold text-text mb-4">
+            Learning Insights
+          </h2>
+
+          {loadingInsights ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
+            </div>
+          ) : learningModel?.hasData ? (
+            <div className="space-y-6">
+              {/* Best Learning Time */}
+              {learningModel.optimalTime && (
+                <div className="bg-primary/10 p-4 border-3 border-border">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+                      <svg className="w-5 h-5 text-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-heading font-bold text-text">Best Learning Time</p>
+                      <p className="text-text/70 capitalize">
+                        You learn best in the <strong>{learningModel.optimalTime}</strong>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Average Session Duration */}
+              {learningModel.avgSessionDuration && learningModel.avgSessionDuration > 0 && (
+                <div className="bg-surface p-4 border-3 border-border">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                      <svg className="w-5 h-5 text-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-heading font-bold text-text">Average Session Duration</p>
+                      <p className="text-text/70">
+                        <strong>{Math.round(learningModel.avgSessionDuration / 60)}</strong> minutes per session
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Sessions Analyzed */}
+              <div className="bg-surface p-4 border-3 border-border">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-success/30 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-heading font-bold text-text">Sessions Analyzed</p>
+                    <p className="text-text/70">
+                      <strong>{learningModel.sessionsAnalyzed}</strong> session{learningModel.sessionsAnalyzed !== 1 ? 's' : ''} analyzed
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Confidence Score */}
+              {learningModel.confidenceScore !== undefined && (
+                <div className="bg-surface p-4 border-3 border-border">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-heading font-bold text-text">Model Confidence</p>
+                    <p className="text-sm text-text/70">{Math.round(learningModel.confidenceScore * 100)}%</p>
+                  </div>
+                  <div className="w-full bg-background border-2 border-border h-4">
+                    <div
+                      className="h-full bg-primary transition-all"
+                      style={{ width: `${Math.min(learningModel.confidenceScore * 100, 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-text/50 mt-2">
+                    Complete more sessions to improve model accuracy
+                  </p>
+                </div>
+              )}
+
+              {/* Recent Patterns */}
+              {learningModel.patterns && learningModel.patterns.length > 0 && (
+                <div>
+                  <p className="font-heading font-semibold text-text mb-2">Recent Learning Patterns</p>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {learningModel.patterns.slice(0, 5).map((pattern) => (
+                      <div key={pattern.id} className="text-sm bg-background p-2 border border-border/50">
+                        <span className="text-text/70">
+                          Session at <strong className="text-text">{(pattern.patternData.timeOfDay as string) || 'unknown time'}</strong>
+                          {pattern.patternData.questionsAnswered && (
+                            <> - {pattern.patternData.questionsCorrect as number}/{pattern.patternData.questionsAnswered as number} correct</>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <svg className="w-12 h-12 mx-auto text-text/30 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <p className="text-text/70">
+                {learningModel?.message || 'No learning data yet. Complete more sessions to build your profile.'}
+              </p>
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   );
 }

@@ -12,6 +12,7 @@ export default function Layout() {
 
   const navLinks = [
     { to: '/', label: 'Home' },
+    { to: '/feed', label: 'Your Feed' },
     { to: '/library', label: 'Library' },
     { to: '/settings', label: 'Settings' },
   ];

@@ -4,6 +4,7 @@ import ErrorBoundary from './components/ui/ErrorBoundary';
 import Home from './pages/Home';
 import Settings from './pages/Settings';
 import Library from './pages/Library';
+import Feed from './pages/Feed';
 import SessionOverview from './pages/SessionOverview';
 import ActiveSession from './pages/ActiveSession';
 import SessionNotes from './pages/SessionNotes';
@@ -32,6 +33,7 @@ function App() {
             <Route index element={<Home />} />
             <Route path="settings" element={<Settings />} />
             <Route path="library" element={<Library />} />
+            <Route path="feed" element={<Feed />} />
             <Route path="session/:sessionId/overview" element={<SessionOverview />} />
             <Route path="session/:sessionId/active" element={<ActiveSession />} />
             <Route path="session/:sessionId/notes" element={<SessionNotes />} />
