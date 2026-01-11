@@ -1,17 +1,16 @@
 # Phase One Incomplete Features
 
-**Document Version:** 1.0
+**Document Version:** 1.1
 **Last Updated:** January 2025
-**Current Progress:** 297/302 features passing (98.3%)
+**Current Progress:** 300/302 features passing (99.3%)
 
 ---
 
 ## Executive Summary
 
-Teachy has achieved 98.3% completion with 5 features remaining incomplete. All 5 features require **external dependencies** that cannot be satisfied in the automated testing/development environment. These are not code defects - the implementation is complete and production-ready, but requires:
+Teachy has achieved 99.3% completion with 2 features remaining incomplete. Both features require **server-side web scraping infrastructure** that cannot be implemented in a client-only application due to browser CORS restrictions.
 
-1. A valid **Gemini API key** from Google AI Studio
-2. **Server-side web scraping infrastructure** for fetching external content
+**Note:** Gemini API integration has been manually tested and confirmed working (Features #103, #223, #224 are now complete).
 
 ---
 
@@ -19,66 +18,8 @@ Teachy has achieved 98.3% completion with 5 features remaining incomplete. All 5
 
 | Feature ID | Priority | Feature Name | Blocking Dependency |
 |------------|----------|--------------|---------------------|
-| #103 | 1697 | Gemini API integration works | Valid Gemini API key |
 | #105 | 1698 | Knowledge base fetch works | Server-side web scraping |
-| #220 | 1699 | Feedback references knowledge base | Depends on #103 & #105 |
-| #223 | 1700 | Questions generated from transcript | Valid Gemini API key |
-| #224 | 1701 | Topic titles from video content | Valid Gemini API key |
-
----
-
-## Feature #103: Gemini API Integration Works
-
-### Description
-Verify that Gemini API calls return real AI-generated responses instead of fallback/template responses.
-
-### Test Steps
-1. Configure valid API key in Settings
-2. Start a learning session
-3. Answer a question
-4. Verify feedback is AI-generated and contextual
-5. Verify response is not hardcoded/templated
-
-### Why It Didn't Work
-
-**Root Cause:** No valid Gemini API key available in the testing environment.
-
-The autonomous development agent uses test API keys (e.g., `test-api-key-regression-149`) which are not valid Google API keys. When the Gemini API receives an invalid key, it returns a 400 error:
-
-```
-Gemini API error: 400 - API key not valid
-```
-
-The application correctly falls back to template-based responses using `generateFallbackFeedback()` and fallback topic generation, but this means the "real AI integration" test cannot pass.
-
-### Current Implementation Status
-
-The code is **fully implemented and production-ready** in `src/services/gemini.ts`:
-
-- Proper API calls to Gemini 2.0 Flash model
-- Request/response handling with JSON extraction
-- Rate limiting detection (HTTP 429, quota exceeded)
-- Graceful fallback when API unavailable
-- API key validation function
-- Temperature, topK, topP configuration
-
-### Proposed Solution
-
-**Manual Testing Required:**
-
-1. Obtain a valid Gemini API key from [Google AI Studio](https://aistudio.google.com/)
-2. Enter the API key in Teachy Settings page
-3. Start a new learning session
-4. Verify that:
-   - Questions are contextual to video content
-   - Feedback references specific parts of user's answer
-   - Responses vary based on answer quality
-   - No "fallback" indicators in console logs
-
-**Production Deployment:**
-- Users will provide their own Gemini API keys
-- Consider offering a pooled API key option for premium users
-- Implement usage tracking and rate limit management
+| #220 | 1699 | Feedback references knowledge base | Depends on #105 |
 
 ---
 
@@ -107,7 +48,7 @@ When the browser attempts to fetch content from external URLs (GitHub, documenta
 
 **Console Error Example:**
 ```
-Access to fetch at 'https://github.com/user/repo' from origin 'http://localhost:5214'
+Access to fetch at 'https://github.com/user/repo' from origin 'http://localhost:5173'
 has been blocked by CORS policy
 ```
 
@@ -184,21 +125,18 @@ Verify that AI-generated feedback can cite and reference the enriched knowledge 
 
 ### Why It Didn't Work
 
-**Root Cause:** This feature depends on both #103 (Gemini API) and #105 (Knowledge Base Fetch).
+**Root Cause:** This feature depends on #105 (Knowledge Base Fetch).
 
 **Dependency Chain:**
 ```
 Knowledge Base Fetch (#105) → Extract source content
         ↓
-Gemini API Integration (#103) → Generate contextual feedback
+Gemini API Integration (#103) → Generate contextual feedback ✅ WORKING
         ↓
 Feedback References KB (#220) → Include source citations
 ```
 
-Since neither dependency is satisfied:
-- No real content is fetched from external sources
-- No real AI is generating the feedback
-- Therefore, no source citations can appear in feedback
+Since no real content is fetched from external sources (#105), the Gemini API has no knowledge base content to reference in its feedback.
 
 ### Current Implementation Status
 
@@ -214,20 +152,18 @@ const prompt = `
 `;
 ```
 
-The code is ready - it just needs real data flowing through.
+The code is ready - it just needs real knowledge base data from #105.
 
 ### Proposed Solution
 
-**Prerequisites:**
-1. First implement Feature #105 (Knowledge Base Fetch)
-2. Then implement Feature #103 (Gemini API)
+**Prerequisite:**
+Implement Feature #105 (Knowledge Base Fetch) first.
 
 **Testing Steps:**
 1. Use a video that mentions well-known GitHub repos (e.g., React, Vue, TensorFlow)
-2. Ensure knowledge base sources are populated with real content
-3. Enter Gemini API key
-4. Answer questions about the referenced tools
-5. Verify feedback includes phrases like:
+2. Ensure knowledge base sources are populated with real content (after #105 is fixed)
+3. Answer questions about the referenced tools
+4. Verify feedback includes phrases like:
    - "According to the documentation..."
    - "The GitHub README mentions..."
    - "Based on the official docs..."
@@ -241,172 +177,35 @@ When referencing external sources, use the format:
 
 ---
 
-## Feature #223: Questions Generated from Transcript
-
-### Description
-Verify that questions are derived from actual video content and mention specific terms, concepts, and examples from the video rather than being generic.
-
-### Test Steps
-1. Use a video about a known topic (e.g., specific framework, tool, concept)
-2. Start a learning session
-3. Review the generated questions
-4. Verify questions mention specific terms from the video
-5. Verify questions are not generic templates
-
-### Why It Didn't Work
-
-**Root Cause:** Requires valid Gemini API key for content-aware question generation.
-
-Without a valid API key, the application uses fallback question templates:
-
-```javascript
-// Fallback questions (generic)
-"What are the key concepts discussed in this section?"
-"How would you apply what you learned here?"
-"What's the main takeaway from this topic?"
-```
-
-These are intentionally generic because no AI is available to generate content-specific questions.
-
-### Current Implementation Status
-
-The Gemini prompt for question generation is **fully implemented** in `src/services/gemini.ts`:
-
-```javascript
-const prompt = `
-  Analyze this video transcript and generate learning topics with questions.
-
-  Transcript: ${transcript}
-  Video Title: ${videoTitle}
-
-  Generate 3-5 topics, each with 2-3 questions that:
-  - Reference specific concepts from the video
-  - Use terminology from the transcript
-  - Test understanding of key points
-  ...
-`;
-```
-
-### Proposed Solution
-
-**Manual Testing Required:**
-
-1. Enter valid Gemini API key
-2. Use a video with distinctive, specific content (e.g., a tutorial on React hooks)
-3. Start a session
-4. Verify questions include:
-   - Specific terminology from the video (e.g., "useState", "useEffect")
-   - References to examples shown in the video
-   - Questions about specific tools/frameworks mentioned
-5. Compare against fallback questions to confirm they're different
-
-**Quality Indicators:**
-- Questions mention specific names, tools, or concepts
-- Questions reference examples from the video
-- Questions vary significantly between different videos
-- Questions would not make sense for a different video
-
----
-
-## Feature #224: Topic Titles from Video Content
-
-### Description
-Verify that topic/section titles are derived from the actual video content and reflect the video's structure rather than being generic placeholders.
-
-### Test Steps
-1. Use a video with a known structure (e.g., tutorial with clear sections)
-2. Start a learning session
-3. Review topic titles in the Session Overview
-4. Verify titles reflect actual video segments/sections
-
-### Why It Didn't Work
-
-**Root Cause:** Requires valid Gemini API key for content-aware topic extraction.
-
-Without a valid API key, the application uses fallback topic titles:
-
-```javascript
-// Fallback topics (generic)
-"Introduction and Overview"
-"Key Concepts"
-"Practical Applications"
-```
-
-These generic titles are used regardless of video content when no AI is available.
-
-### Current Implementation Status
-
-The Gemini prompt for topic extraction is **fully implemented**:
-
-```javascript
-const prompt = `
-  Analyze this transcript and break it into logical learning topics.
-
-  For each topic, provide:
-  - A descriptive title that captures the specific subject matter
-  - A 2-3 sentence summary of the key points
-  - 2-3 questions to test understanding
-
-  Topics should reflect the actual structure and content of the video.
-`;
-```
-
-### Proposed Solution
-
-**Manual Testing Required:**
-
-1. Enter valid Gemini API key
-2. Use a video with clear sections (e.g., "How to Build a REST API" with sections on setup, routes, authentication, deployment)
-3. Start a session
-4. Verify topic titles:
-   - Match the video's actual sections
-   - Use specific terminology from the video
-   - Are different from the generic fallback titles
-   - Would not apply to a different video
-
-**Examples of Good vs Bad Topic Titles:**
-
-| Generic (Fallback) | Content-Specific (AI) |
-|-------------------|----------------------|
-| "Introduction and Overview" | "Setting Up Your Next.js Project" |
-| "Key Concepts" | "Understanding React Server Components" |
-| "Practical Applications" | "Deploying to Vercel with Environment Variables" |
-
----
-
 ## Summary: Path to 100% Completion
 
-### Immediate Actions (Manual Testing)
+### Required Action
 
 | Action | Features Unblocked |
 |--------|-------------------|
-| Obtain and enter Gemini API key | #103, #223, #224 |
-| Implement backend proxy for URL fetching | #105 |
-| Test with real API after above | #220 |
+| Implement backend proxy for URL fetching | #105, #220 |
 
-### Production Deployment Requirements
+### Implementation Options
 
-1. **Gemini API Key Management**
-   - User-provided keys (current design)
-   - OR pooled API key with usage tracking (premium feature)
+| Option | Complexity | Cost | Coverage |
+|--------|------------|------|----------|
+| GitHub API only | Low | Free | GitHub repos only |
+| Add to existing server.js | Low | Free | Full control |
+| Serverless function | Medium | Free tier available | Scalable |
+| Jina Reader API | Low | Free tier available | Broad coverage |
+| Commercial API (Diffbot) | Low | Paid | Enterprise-grade |
 
-2. **Web Scraping Infrastructure**
-   - Backend proxy server OR serverless function
-   - GitHub API integration for repo content
-   - Consider commercial scraping API for broad coverage
+### Recommended Approach
 
-3. **Testing Protocol**
-   - Create test cases with specific videos
-   - Document expected topic titles and question terms
-   - Automate verification where possible
+1. **Quick Win**: Add GitHub API integration to fetch README content for GitHub URLs
+2. **Full Solution**: Add a `/api/fetch-url` endpoint to the existing `server.js` proxy
 
-### No Code Changes Required
+### Code Changes Required
 
-All 5 features have **complete, production-ready code**. The only blockers are:
-- External API keys (user-provided)
-- Infrastructure for web scraping (deployment decision)
-
-The autonomous development agent successfully built a robust fallback system that allows the app to function gracefully without these dependencies while being fully ready to leverage them when available.
+Only `src/services/knowledgeBase.ts` needs modification to:
+1. Call the backend proxy instead of direct fetch
+2. Parse the returned content
+3. Extract relevant snippets
 
 ---
 
@@ -414,11 +213,22 @@ The autonomous development agent successfully built a robust fallback system tha
 
 | Feature | Primary Code Location |
 |---------|----------------------|
-| #103, #223, #224 | `src/services/gemini.ts` |
 | #105 | `src/services/knowledgeBase.ts` |
 | #220 | `src/services/gemini.ts` (evaluateAnswer function) |
-| Fallback handling | `src/services/session.ts` |
+| Proxy server | `server.js` |
 
 ---
 
-*Document prepared for manual feature completion and production planning.*
+## Completed Features (Previously Listed)
+
+The following features were previously incomplete but have been **manually verified as working**:
+
+| Feature ID | Feature Name | Status |
+|------------|--------------|--------|
+| #103 | Gemini API integration works | ✅ CONFIRMED WORKING |
+| #223 | Questions generated from transcript | ✅ CONFIRMED WORKING |
+| #224 | Topic titles from video content | ✅ CONFIRMED WORKING |
+
+---
+
+*Document updated after manual testing confirmation.*
