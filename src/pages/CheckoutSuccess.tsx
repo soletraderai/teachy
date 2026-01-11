@@ -92,7 +92,7 @@ export default function CheckoutSuccess() {
     verifyCheckout();
   }, [searchParams, accessToken, setUser]);
 
-  const price = billingType === 'monthly' ? '$12' : '$96';
+  const price = billingType === 'monthly' ? '$12' : '$99';
   const period = billingType === 'monthly' ? 'month' : 'year';
 
   if (isProcessing) {

@@ -25,7 +25,7 @@ const pricingPlans = {
   },
   pro: {
     name: 'Pro',
-    price: { monthly: 12, yearly: 96 },
+    price: { monthly: 12, yearly: 99 },
     description: 'For serious learners who want to maximize retention',
     features: [
       'Unlimited learning sessions',
