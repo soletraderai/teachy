@@ -102,6 +102,11 @@ export default function Goals() {
   const [suggestions, setSuggestions] = useState<GoalSuggestion[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [editData, setEditData] = useState<{ targetValue: number | null; deadline: string }>({
+    targetValue: null,
+    deadline: '',
+  });
 
   const navigate = useNavigate();
   const { accessToken, isAuthenticated, user } = useAuthStore();
@@ -178,6 +183,51 @@ export default function Goals() {
     });
     setWizardStep(3); // Skip to deadline step since we have the basics
     setShowWizard(true);
+  };
+
+  const handleEditGoal = (goal: Goal) => {
+    setEditingGoal(goal);
+    setEditData({
+      targetValue: goal.targetValue,
+      deadline: goal.deadline ? goal.deadline.split('T')[0] : '',
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingGoal) return;
+
+    try {
+      setSubmitting(true);
+
+      const response = await fetch(`${API_BASE}/goals/${editingGoal.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          ...(editData.targetValue !== null && { targetValue: editData.targetValue }),
+          deadline: editData.deadline || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to update goal');
+      }
+
+      setToast({ message: 'Goal updated successfully!', type: 'success' });
+      setEditingGoal(null);
+      fetchGoals();
+    } catch (err) {
+      setToast({
+        message: err instanceof Error ? err.message : 'Failed to update goal',
+        type: 'error',
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleCreateGoal = async () => {
@@ -504,6 +554,53 @@ export default function Goals() {
         </div>
       )}
 
+      {/* Edit Goal Modal */}
+      {editingGoal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <h3 className="font-heading text-xl font-bold text-text mb-4">Edit Goal</h3>
+            <p className="text-text/70 mb-6">{editingGoal.title}</p>
+
+            <div className="space-y-4">
+              {editingGoal.goalType !== 'OUTCOME' && (
+                <div>
+                  <label className="block text-sm font-semibold text-text mb-2">
+                    Target Value ({editingGoal.targetUnit})
+                  </label>
+                  <input
+                    type="number"
+                    value={editData.targetValue || ''}
+                    onChange={(e) => setEditData({ ...editData, targetValue: parseInt(e.target.value) || null })}
+                    className="w-full px-4 py-3 border-3 border-border bg-surface font-body text-text focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Enter target value"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-semibold text-text mb-2">Deadline</label>
+                <input
+                  type="date"
+                  value={editData.deadline}
+                  onChange={(e) => setEditData({ ...editData, deadline: e.target.value })}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-3 border-3 border-border bg-surface font-body text-text focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="secondary" onClick={() => setEditingGoal(null)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveEdit} disabled={submitting}>
+                {submitting ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* Goal Suggestions */}
       {showSuggestions && suggestions.length > 0 && statusFilter === 'ACTIVE' && (
         <Card className="bg-secondary/20">
@@ -626,15 +723,28 @@ export default function Goals() {
                     </span>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDeleteGoal(goal.id)}
-                  className="text-text/40 hover:text-error transition-colors"
-                  aria-label="Delete goal"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+                <div className="flex items-center gap-2">
+                  {goal.status === 'ACTIVE' && (
+                    <button
+                      onClick={() => handleEditGoal(goal)}
+                      className="text-text/40 hover:text-primary transition-colors"
+                      aria-label="Edit goal"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDeleteGoal(goal.id)}
+                    className="text-text/40 hover:text-error transition-colors"
+                    aria-label="Delete goal"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               <h3 className="font-heading font-bold text-lg text-text mb-2">{goal.title}</h3>
