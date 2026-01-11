@@ -34,6 +34,150 @@ router.get('/', requirePro, async (req: AuthenticatedRequest, res: Response, nex
   }
 });
 
+// GET /api/goals/suggestions (must be before /:id route)
+router.get('/suggestions', requirePro, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const suggestions: Array<{
+      id: string;
+      type: 'TIME' | 'TOPIC' | 'OUTCOME';
+      title: string;
+      description: string;
+      targetValue?: number;
+      targetUnit?: string;
+      reason: string;
+    }> = [];
+
+    // Get user's learning history
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    // Get completed sessions in the last 30 days
+    const recentSessions = await prisma.session.findMany({
+      where: {
+        userId: req.user!.id,
+        status: 'COMPLETED',
+        completedAt: { gte: thirtyDaysAgo },
+      },
+    });
+
+    // Get user's topics
+    const topics = await prisma.topic.findMany({
+      where: { userId: req.user!.id },
+    });
+
+    // Get user's existing active goals to avoid duplicates
+    const existingGoals = await prisma.goal.findMany({
+      where: { userId: req.user!.id, status: 'ACTIVE' },
+    });
+
+    const existingGoalTitles = existingGoals.map(g => g.title.toLowerCase());
+
+    // Suggestion 1: Time-based goal based on average session time
+    if (recentSessions.length >= 3) {
+      const totalMinutes = recentSessions.reduce((sum, session) => {
+        if (session.completedAt && session.startedAt) {
+          return sum + (new Date(session.completedAt).getTime() - new Date(session.startedAt).getTime()) / (1000 * 60);
+        }
+        return sum;
+      }, 0);
+      const avgMinutesPerSession = Math.round(totalMinutes / recentSessions.length);
+
+      if (avgMinutesPerSession >= 10 && !existingGoalTitles.some(t => t.includes('minute') || t.includes('hour'))) {
+        const suggestedMinutes = Math.max(15, Math.round(avgMinutesPerSession * 1.2 / 5) * 5);
+        suggestions.push({
+          id: 'time-daily',
+          type: 'TIME',
+          title: `Learn for ${suggestedMinutes} minutes daily`,
+          description: `Build a consistent learning habit with daily practice`,
+          targetValue: suggestedMinutes,
+          targetUnit: 'minutes',
+          reason: `Based on your average session time of ${avgMinutesPerSession} minutes`,
+        });
+      }
+    }
+
+    // Suggestion 2: Topic-based goal based on topics in progress
+    const introducedTopics = topics.filter(t => t.masteryLevel === 'INTRODUCED');
+    const developingTopics = topics.filter(t => t.masteryLevel === 'DEVELOPING');
+
+    if (introducedTopics.length + developingTopics.length >= 2 && !existingGoalTitles.some(t => t.includes('topic'))) {
+      const targetTopics = Math.min(10, Math.max(5, introducedTopics.length + developingTopics.length));
+      suggestions.push({
+        id: 'topic-mastery',
+        type: 'TOPIC',
+        title: `Master ${targetTopics} topics`,
+        description: `Advance your knowledge by reaching mastery level`,
+        targetValue: targetTopics,
+        targetUnit: 'topics',
+        reason: `You have ${introducedTopics.length + developingTopics.length} topics in progress`,
+      });
+    }
+
+    // Suggestion 3: Outcome-based goal based on channel patterns
+    const channelSessionCounts: Record<string, { count: number; name: string }> = {};
+    for (const session of recentSessions) {
+      if (session.channelId && session.channelName) {
+        if (!channelSessionCounts[session.channelId]) {
+          channelSessionCounts[session.channelId] = { count: 0, name: session.channelName };
+        }
+        channelSessionCounts[session.channelId].count++;
+      }
+    }
+
+    const topChannel = Object.entries(channelSessionCounts)
+      .sort((a, b) => b[1].count - a[1].count)[0];
+
+    if (topChannel && topChannel[1].count >= 3 && !existingGoalTitles.some(t => t.toLowerCase().includes(topChannel[1].name.toLowerCase()))) {
+      suggestions.push({
+        id: 'channel-series',
+        type: 'OUTCOME',
+        title: `Complete a ${topChannel[1].name} learning path`,
+        description: `Finish a comprehensive course or series from this channel`,
+        reason: `You've watched ${topChannel[1].count} videos from ${topChannel[1].name}`,
+      });
+    }
+
+    // Suggestion 4: If user has no activity, suggest starting goals
+    if (recentSessions.length === 0 && suggestions.length === 0) {
+      suggestions.push({
+        id: 'getting-started',
+        type: 'TIME',
+        title: `Learn for 15 minutes daily`,
+        description: `Start your learning journey with achievable daily goals`,
+        targetValue: 15,
+        targetUnit: 'minutes',
+        reason: `A great starting point for building learning habits`,
+      });
+
+      suggestions.push({
+        id: 'first-topics',
+        type: 'TOPIC',
+        title: `Complete 5 topics`,
+        description: `Build a foundation of knowledge`,
+        targetValue: 5,
+        targetUnit: 'topics',
+        reason: `Perfect for getting started with structured learning`,
+      });
+    }
+
+    // Suggestion 5: Weekly time goal if daily exists
+    if (existingGoalTitles.some(t => t.includes('daily')) && !existingGoalTitles.some(t => t.includes('weekly'))) {
+      suggestions.push({
+        id: 'time-weekly',
+        type: 'TIME',
+        title: `Learn for 3 hours weekly`,
+        description: `Maintain consistent weekly progress`,
+        targetValue: 180,
+        targetUnit: 'minutes',
+        reason: `Level up your daily habit with weekly targets`,
+      });
+    }
+
+    res.json(suggestions.slice(0, 5)); // Return max 5 suggestions
+  } catch (error) {
+    next(error);
+  }
+});
+
 // GET /api/goals/approaching-deadlines (must be before /:id route)
 router.get('/approaching-deadlines', requirePro, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {

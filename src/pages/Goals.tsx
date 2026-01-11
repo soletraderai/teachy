@@ -21,6 +21,16 @@ interface Goal {
   milestones: Milestone[];
 }
 
+interface GoalSuggestion {
+  id: string;
+  type: 'TIME' | 'TOPIC' | 'OUTCOME';
+  title: string;
+  description: string;
+  targetValue?: number;
+  targetUnit?: string;
+  reason: string;
+}
+
 interface Milestone {
   id: string;
   milestonePercentage: number;
@@ -89,6 +99,9 @@ export default function Goals() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'COMPLETED' | 'ABANDONED'>('ACTIVE');
+  const [suggestions, setSuggestions] = useState<GoalSuggestion[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(true);
 
   const navigate = useNavigate();
   const { accessToken, isAuthenticated, user } = useAuthStore();
@@ -103,6 +116,7 @@ export default function Goals() {
       return;
     }
     fetchGoals();
+    fetchSuggestions();
   }, [accessToken, isAuthenticated, user, navigate, statusFilter]);
 
   const fetchGoals = async () => {
@@ -130,6 +144,40 @@ export default function Goals() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchSuggestions = async () => {
+    try {
+      setLoadingSuggestions(true);
+
+      const response = await fetch(`${API_BASE}/goals/suggestions`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSuggestions(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch suggestions:', err);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  const handleUseSuggestion = (suggestion: GoalSuggestion) => {
+    setWizardData({
+      goalType: suggestion.type,
+      title: suggestion.title,
+      targetValue: suggestion.targetValue || null,
+      targetUnit: suggestion.targetUnit || GOAL_TYPE_INFO[suggestion.type].defaultUnit,
+      deadline: '',
+    });
+    setWizardStep(3); // Skip to deadline step since we have the basics
+    setShowWizard(true);
   };
 
   const handleCreateGoal = async () => {
@@ -454,6 +502,61 @@ export default function Goals() {
             {renderWizardStep()}
           </Card>
         </div>
+      )}
+
+      {/* Goal Suggestions */}
+      {showSuggestions && suggestions.length > 0 && statusFilter === 'ACTIVE' && (
+        <Card className="bg-secondary/20">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                <svg className="w-5 h-5 text-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-heading font-bold text-text">Suggested Goals</h3>
+                <p className="text-sm text-text/70">Based on your learning activity</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowSuggestions(false)}
+              className="text-text/40 hover:text-text transition-colors"
+              aria-label="Hide suggestions"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {suggestions.map((suggestion) => (
+              <div
+                key={suggestion.id}
+                className="p-4 border-2 border-border bg-surface hover:shadow-brutal transition-all cursor-pointer"
+                onClick={() => handleUseSuggestion(suggestion)}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-bold px-2 py-0.5 bg-primary/30 text-text uppercase">
+                    {suggestion.type}
+                  </span>
+                </div>
+                <h4 className="font-heading font-bold text-text mb-1">{suggestion.title}</h4>
+                <p className="text-sm text-text/70 mb-2">{suggestion.description}</p>
+                <p className="text-xs text-text/50 italic">{suggestion.reason}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {loadingSuggestions && statusFilter === 'ACTIVE' && (
+        <Card className="bg-secondary/20">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent"></div>
+            <span className="text-text/70">Finding goal suggestions based on your activity...</span>
+          </div>
+        </Card>
       )}
 
       {/* Status Filter */}
