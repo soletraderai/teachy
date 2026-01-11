@@ -16,6 +16,7 @@ import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import EmailVerification from './pages/EmailVerification';
+import CheckoutSuccess from './pages/CheckoutSuccess';
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
             <Route path="session/:sessionId/active" element={<ActiveSession />} />
             <Route path="session/:sessionId/notes" element={<SessionNotes />} />
             <Route path="pricing" element={<Pricing />} />
+            <Route path="checkout/success" element={<CheckoutSuccess />} />
             <Route path="404" element={<NotFound />} />
             <Route path="*" element={<Navigate to="/404" replace />} />
           </Route>

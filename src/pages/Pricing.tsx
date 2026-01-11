@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import Toast from '../components/ui/Toast';
 import { useAuthStore } from '../stores/authStore';
 
 const pricingPlans = {
@@ -24,7 +25,7 @@ const pricingPlans = {
   },
   pro: {
     name: 'Pro',
-    price: { monthly: 9.99, yearly: 99.99 },
+    price: { monthly: 12, yearly: 96 },
     description: 'For serious learners who want to maximize retention',
     features: [
       'Unlimited learning sessions',
@@ -44,8 +45,10 @@ const pricingPlans = {
 
 export default function Pricing() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [isLoading, setIsLoading] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, accessToken } = useAuthStore();
 
   const yearlyDiscount = Math.round(
     ((pricingPlans.pro.price.monthly * 12 - pricingPlans.pro.price.yearly) /
@@ -53,16 +56,57 @@ export default function Pricing() {
       100
   );
 
-  const handleSelectPlan = (plan: 'free' | 'pro') => {
+  const handleSelectPlan = async (plan: 'free' | 'pro') => {
     if (!isAuthenticated()) {
       // Redirect to signup with plan info
-      navigate(`/signup?plan=${plan}`);
+      navigate(`/signup?plan=${plan}&billing=${billingCycle}`);
+      return;
+    }
+
+    if (plan === 'free') {
+      // Already on free or just stay on free
       return;
     }
 
     if (plan === 'pro' && user?.tier === 'FREE') {
-      // TODO: Redirect to checkout/upgrade flow
-      navigate('/settings');
+      setIsLoading(true);
+      try {
+        const response = await fetch('http://localhost:3001/api/subscriptions/checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ priceType: billingCycle }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          // Check for development mode simulation
+          if (data.error === 'STRIPE_NOT_CONFIGURED') {
+            // Development mode - simulate checkout success
+            setToast({ message: 'Development mode: Simulating checkout...', type: 'info' });
+            setTimeout(() => {
+              navigate(`/checkout/success?dev_mode=true&billing=${billingCycle}`);
+            }, 500);
+            return;
+          }
+          throw new Error(data.message || 'Failed to start checkout');
+        }
+
+        // Redirect to Stripe checkout
+        if (data.url) {
+          window.location.href = data.url;
+        }
+      } catch (error) {
+        setToast({
+          message: error instanceof Error ? error.message : 'Failed to start checkout',
+          type: 'error',
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -235,8 +279,9 @@ export default function Pricing() {
             size="lg"
             className="w-full"
             onClick={() => handleSelectPlan('pro')}
+            disabled={isLoading || user?.tier === 'PRO'}
           >
-            {user?.tier === 'PRO' ? 'Current Plan' : 'Upgrade to Pro'}
+            {isLoading ? 'Processing...' : user?.tier === 'PRO' ? 'Current Plan' : 'Upgrade to Pro'}
           </Button>
         </Card>
       </div>
@@ -305,6 +350,15 @@ export default function Pricing() {
           </Button>
         </Card>
       </div>
+
+      {/* Toast notifications */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }
