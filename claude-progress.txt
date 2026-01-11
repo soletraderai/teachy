@@ -3,10 +3,10 @@
 ## Session 5 - January 11, 2026
 
 ### Summary
-Implemented Feed page, channel session tracking, learning model data collection, Learning Insights UI, signal override toggles, learning model reset, and optimal time suggestion. Progress increased from 108/415 to 116/415 (28.0%).
+Implemented Feed page, channel session tracking, learning model data collection, Learning Insights UI, signal override toggles, learning model reset, optimal time suggestion, spaced repetition tracking, and review notifications. Progress increased from 108/415 to 118/415 (28.4%).
 
 ### Current Progress
-- **Passing**: 116/415 features (28.0%)
+- **Passing**: 118/415 features (28.4%)
 - **Phase**: 2
 
 ### Session 5 Implemented Features
@@ -61,6 +61,18 @@ Implemented Feed page, channel session tracking, learning model data collection,
 - Displays whether morning, afternoon, or evening is optimal
 - Based on actual session data patterns
 
+#### 9. Spaced Repetition Topics Tracking - Feature #519
+- Topics have reviewIntervalDays (default 1 day)
+- Topics have nextReviewDate calculated
+- SM-2 algorithm implemented in API
+- Topics due for review returned via /api/topics/due-for-review
+
+#### 10. Review Due Notification Banner - Feature #520
+- Banner displays at top of page when topics are due
+- Shows count of due topics
+- "Review Now" link to Library page
+- Dismissible notification
+
 ### Infrastructure Changes
 - Updated CORS to support multiple frontend ports (5173, 5174, 5175)
 - Added POST /api/sessions/:id/complete endpoint
@@ -90,6 +102,8 @@ Priority items to implement:
 - `00725b4` - feat: Add Feed page, channel tracking, and learning insights
 - `55534bd` - feat: Add learning model signal override toggles
 - `1e1e099` - feat: Add learning model reset functionality
+- `8210381` - docs: Update progress to 116/415 (28.0%)
+- `aad7bec` - feat: Add review due notification banner
 
 ### Screenshots Taken
 - feed-empty-state.png
@@ -103,3 +117,4 @@ Priority items to implement:
 - settings-model-reset-complete.png
 - settings-signal-toggle-timeofday-disabled.png
 - settings-best-learning-time.png
+- review-due-notification-banner.png
