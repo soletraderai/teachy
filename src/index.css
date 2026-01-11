@@ -57,6 +57,30 @@ code, pre {
   font-family: var(--font-mono);
 }
 
+/* Global focus styles for accessibility */
+*:focus-visible {
+  outline: 3px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
+/* Remove default focus for mouse users, keep for keyboard */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Enhanced focus for buttons and interactive elements */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--color-secondary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px rgba(0, 212, 255, 0.2);
+}
+
 /* Neobrutalism utility classes */
 @layer components {
   .brutal-border {
@@ -74,6 +98,22 @@ code, pre {
   .brutal-card {
     background-color: var(--color-surface);
     border: var(--border-width) var(--border-style) var(--color-border);
+    box-shadow: var(--shadow);
+  }
+
+  /* Card hover lift effect */
+  .card-hoverable {
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+    cursor: pointer;
+  }
+
+  .card-hoverable:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-hover);
+  }
+
+  .card-hoverable:active {
+    transform: translateY(-2px);
     box-shadow: var(--shadow);
   }
 

@@ -309,7 +309,8 @@ export default function Library() {
           {paginatedSessions.map((session, index) => (
             <StaggeredItem key={session.id} index={index} baseDelay={100} staggerDelay={75}>
             <Card
-              className="cursor-pointer hover:shadow-brutal-hover transition-shadow h-full"
+              hoverable
+              className="h-full"
               onClick={() => navigate(`/session/${session.id}/notes`)}
             >
               {/* Thumbnail */}

@@ -166,7 +166,7 @@ export default function Feed() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {feedData.channels.map((channel, index) => (
               <StaggeredItem key={channel.id} index={index} baseDelay={100} staggerDelay={75}>
-              <Card className="flex flex-col h-full">
+              <Card hoverable className="flex flex-col h-full">
                 <div className="flex items-center gap-3 mb-4">
                   {channel.channelThumbnail ? (
                     <img
