@@ -6,6 +6,7 @@ import Select from '../components/ui/Select';
 import Card from '../components/ui/Card';
 import Toast from '../components/ui/Toast';
 import { useSettingsStore } from '../stores/settingsStore';
+import { useAuthStore } from '../stores/authStore';
 import type { TutorPersonality } from '../types';
 
 const tutorPersonalityOptions: {
@@ -13,30 +14,35 @@ const tutorPersonalityOptions: {
   label: string;
   description: string;
   preview: string;
+  proOnly: boolean;
 }[] = [
   {
     value: 'PROFESSOR',
     label: 'The Professor',
     description: 'Academic and thorough explanations with context and theory',
     preview: '"Let me explain this concept in depth. First, consider the underlying principles..."',
+    proOnly: true,
   },
   {
     value: 'COACH',
     label: 'The Coach',
     description: 'Encouraging and supportive, celebrates progress',
     preview: '"Great effort! You\'re on the right track. Let\'s build on what you\'ve learned..."',
+    proOnly: false,
   },
   {
     value: 'DIRECT',
     label: 'The Direct',
     description: 'Concise and to-the-point, no fluff',
     preview: '"Correct. Key point: X does Y. Next topic."',
+    proOnly: true,
   },
   {
     value: 'CREATIVE',
     label: 'The Creative',
     description: 'Uses analogies, stories, and creative examples',
     preview: '"Think of it like cooking a recipe - each ingredient (concept) builds on the last..."',
+    proOnly: true,
   },
 ];
 
@@ -54,6 +60,10 @@ const languageOptions = [
 export default function Settings() {
   const navigate = useNavigate();
   const { settings, setSettings } = useSettingsStore();
+  const { user, isAuthenticated } = useAuthStore();
+
+  // Check if user has Pro tier
+  const isPro = isAuthenticated() && user?.tier === 'PRO';
 
   const [formData, setFormData] = useState({
     userName: settings.userName,
@@ -278,28 +288,40 @@ export default function Settings() {
               Choose how your AI tutor communicates with you
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
-              {tutorPersonalityOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => handleInputChange('tutorPersonality', option.value)}
-                  className={`p-4 text-left border-3 border-border transition-all ${
-                    formData.tutorPersonality === option.value
-                      ? 'bg-primary shadow-brutal'
-                      : 'bg-surface hover:bg-primary/30 hover:shadow-brutal-sm'
-                  }`}
-                >
-                  <div className="font-heading font-bold text-text mb-1">
-                    {option.label}
-                  </div>
-                  <div className="text-sm text-text/70 mb-2">
-                    {option.description}
-                  </div>
-                  <div className="text-xs text-text/60 italic font-mono bg-background/50 p-2 border border-border/30">
-                    {option.preview}
-                  </div>
-                </button>
-              ))}
+              {tutorPersonalityOptions.map((option) => {
+                const isLocked = option.proOnly && !isPro;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => !isLocked && handleInputChange('tutorPersonality', option.value)}
+                    disabled={isLocked}
+                    className={`p-4 text-left border-3 border-border transition-all relative ${
+                      isLocked
+                        ? 'bg-surface/50 opacity-60 cursor-not-allowed'
+                        : formData.tutorPersonality === option.value
+                        ? 'bg-primary shadow-brutal'
+                        : 'bg-surface hover:bg-primary/30 hover:shadow-brutal-sm'
+                    }`}
+                  >
+                    {/* PRO Badge */}
+                    {isLocked && (
+                      <span className="absolute top-2 right-2 bg-secondary text-text text-xs font-heading font-bold px-2 py-0.5 border border-border">
+                        PRO
+                      </span>
+                    )}
+                    <div className="font-heading font-bold text-text mb-1">
+                      {option.label}
+                    </div>
+                    <div className="text-sm text-text/70 mb-2">
+                      {option.description}
+                    </div>
+                    <div className="text-xs text-text/60 italic font-mono bg-background/50 p-2 border border-border/30">
+                      {option.preview}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
