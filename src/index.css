@@ -125,7 +125,7 @@ textarea:focus-visible,
     font-family: var(--font-heading);
     font-weight: 600;
     cursor: pointer;
-    transition: transform 0.1s, box-shadow 0.1s;
+    transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
   }
 
   .brutal-button:hover {
