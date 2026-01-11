@@ -163,6 +163,7 @@ interface SessionState {
   processingState: ProcessingState | null;
   isSyncing: boolean;
   lastSyncedAt: number | null;
+  migrationDismissed: boolean;
 
   // Session management
   createSession: (session: Session) => void;
@@ -186,6 +187,11 @@ interface SessionState {
   // Cloud sync
   syncWithCloud: () => Promise<void>;
 
+  // Migration
+  getLocalSessionCount: () => number;
+  migrateLocalSessions: () => Promise<void>;
+  dismissMigration: () => void;
+
   // Clear all data
   clearLibrary: () => void;
 }
@@ -200,6 +206,7 @@ export const useSessionStore = create<SessionState>()(
       processingState: null,
       isSyncing: false,
       lastSyncedAt: null,
+      migrationDismissed: false,
 
       createSession: (session) => {
         // Sync to cloud database
@@ -399,6 +406,69 @@ export const useSessionStore = create<SessionState>()(
         }
       },
 
+      // Get count of local sessions (for migration prompt)
+      getLocalSessionCount: () => {
+        const { library } = get();
+        return library.sessions.length;
+      },
+
+      // Migrate all local sessions to the cloud
+      migrateLocalSessions: async () => {
+        const { library, isSyncing } = get();
+        if (isSyncing) return;
+
+        set({ isSyncing: true });
+
+        const failedSessions: string[] = [];
+        const successfulSessions: string[] = [];
+
+        try {
+          // Upload each local session to the cloud, handling partial failures
+          for (const session of library.sessions) {
+            try {
+              // Validate session has required fields before migration
+              if (!session.id || !session.video || !session.createdAt) {
+                console.warn('Skipping invalid/corrupted session:', session.id);
+                failedSessions.push(session.id || 'unknown');
+                continue;
+              }
+
+              await sessionApi.saveSession(session);
+              successfulSessions.push(session.id);
+            } catch (sessionError) {
+              console.error(`Failed to migrate session ${session.id}:`, sessionError);
+              failedSessions.push(session.id);
+            }
+          }
+
+          // Clear local session data after migration attempt
+          // (settings remain in localStorage)
+          set({
+            library: { sessions: [] },
+            currentSession: null,
+            lastSyncedAt: Date.now(),
+            migrationDismissed: true
+          });
+
+          // If some sessions failed, report them
+          if (failedSessions.length > 0 && successfulSessions.length === 0) {
+            throw new Error(`Migration failed for all ${failedSessions.length} sessions`);
+          } else if (failedSessions.length > 0) {
+            console.warn(`Migration partially complete: ${successfulSessions.length} succeeded, ${failedSessions.length} failed`);
+          }
+        } catch (error) {
+          console.error('Migration failed:', error);
+          throw error;
+        } finally {
+          set({ isSyncing: false });
+        }
+      },
+
+      // Dismiss migration prompt without migrating
+      dismissMigration: () => {
+        set({ migrationDismissed: true });
+      },
+
       clearLibrary: () =>
         set({
           library: { sessions: [] },
@@ -408,6 +478,11 @@ export const useSessionStore = create<SessionState>()(
     }),
     {
       name: 'youtube-learning-sessions',
+      partialize: (state) => ({
+        library: state.library,
+        currentSession: state.currentSession,
+        migrationDismissed: state.migrationDismissed,
+      }),
     }
   )
 );
