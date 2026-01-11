@@ -6,6 +6,7 @@ import Select from '../components/ui/Select';
 import Card from '../components/ui/Card';
 import Toast from '../components/ui/Toast';
 import Skeleton, { SettingsSectionSkeleton } from '../components/ui/Skeleton';
+import AnimatedNumber from '../components/ui/AnimatedNumber';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useAuthStore } from '../stores/authStore';
 import type { TutorPersonality } from '../types';
@@ -1224,7 +1225,10 @@ export default function Settings() {
                     <div>
                       <p className="font-heading font-bold text-text">Average Session Duration</p>
                       <p className="text-text/70">
-                        <strong>{Math.round(learningModel.avgSessionDuration / 60)}</strong> minutes per session
+                        <AnimatedNumber
+                          value={Math.round(learningModel.avgSessionDuration / 60)}
+                          className="font-bold"
+                        /> minutes per session
                       </p>
                     </div>
                   </div>
@@ -1242,7 +1246,10 @@ export default function Settings() {
                   <div>
                     <p className="font-heading font-bold text-text">Sessions Analyzed</p>
                     <p className="text-text/70">
-                      <strong>{learningModel.sessionsAnalyzed}</strong> session{learningModel.sessionsAnalyzed !== 1 ? 's' : ''} analyzed
+                      <AnimatedNumber
+                        value={learningModel.sessionsAnalyzed || 0}
+                        className="font-bold"
+                      /> session{learningModel.sessionsAnalyzed !== 1 ? 's' : ''} analyzed
                     </p>
                   </div>
                 </div>
@@ -1253,7 +1260,12 @@ export default function Settings() {
                 <div className="bg-surface p-4 border-3 border-border">
                   <div className="flex items-center justify-between mb-2">
                     <p className="font-heading font-bold text-text">Model Confidence</p>
-                    <p className="text-sm text-text/70">{Math.round(learningModel.confidenceScore * 100)}%</p>
+                    <p className="text-sm text-text/70">
+                      <AnimatedNumber
+                        value={Math.round(learningModel.confidenceScore * 100)}
+                        suffix="%"
+                      />
+                    </p>
                   </div>
                   <div className="w-full bg-background border-2 border-border h-4">
                     <div

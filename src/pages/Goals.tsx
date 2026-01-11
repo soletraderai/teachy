@@ -7,6 +7,7 @@ import Toast from '../components/ui/Toast';
 import ProgressBar from '../components/ui/ProgressBar';
 import { GoalCardSkeleton } from '../components/ui/Skeleton';
 import { StaggeredItem } from '../components/ui/StaggeredList';
+import CompletionCheckmark from '../components/ui/CompletionCheckmark';
 import { useAuthStore } from '../stores/authStore';
 
 interface Goal {
@@ -109,6 +110,7 @@ export default function Goals() {
     targetValue: null,
     deadline: '',
   });
+  const [showCompletionCheckmark, setShowCompletionCheckmark] = useState(false);
 
   const navigate = useNavigate();
   const { accessToken, isAuthenticated, user } = useAuthStore();
@@ -336,8 +338,13 @@ export default function Goals() {
         throw new Error(data.message || 'Failed to complete goal');
       }
 
-      setToast({ message: 'Goal completed! Great job!', type: 'success' });
-      fetchGoals();
+      // Show completion checkmark animation
+      setShowCompletionCheckmark(true);
+      // Delay the toast and refresh until after animation
+      setTimeout(() => {
+        setToast({ message: 'Goal completed! Great job!', type: 'success' });
+        fetchGoals();
+      }, 1000);
     } catch (err) {
       setToast({
         message: err instanceof Error ? err.message : 'Failed to complete goal',
@@ -559,6 +566,13 @@ export default function Goals() {
           onClose={() => setToast(null)}
         />
       )}
+
+      {/* Completion Checkmark Animation */}
+      <CompletionCheckmark
+        show={showCompletionCheckmark}
+        onComplete={() => setShowCompletionCheckmark(false)}
+        message="Goal Complete!"
+      />
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

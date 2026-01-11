@@ -267,3 +267,123 @@ code, pre {
     transform: scale(0.9);
   }
 }
+
+/* Progress bar smooth fill animation */
+.progress-bar-fill {
+  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: width;
+}
+
+/* Completion checkmark animations */
+.completion-overlay-enter {
+  animation: completion-overlay-in 0.3s ease-out forwards;
+}
+
+.completion-overlay-exit {
+  animation: completion-overlay-out 0.3s ease-in forwards;
+}
+
+.completion-check-enter {
+  animation: completion-check-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.completion-check-exit {
+  animation: completion-check-out 0.3s ease-in forwards;
+}
+
+.completion-check-path {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: completion-path-draw 0.4s ease-out 0.3s forwards;
+}
+
+.completion-message-enter {
+  animation: completion-message-in 0.4s ease-out 0.2s forwards;
+  opacity: 0;
+}
+
+.completion-message-exit {
+  animation: completion-message-out 0.2s ease-in forwards;
+}
+
+.completion-bg-pulse {
+  animation: completion-bg-pulse 0.6s ease-out forwards;
+}
+
+@keyframes completion-overlay-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes completion-overlay-out {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes completion-check-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes completion-check-out {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes completion-path-draw {
+  0% {
+    stroke-dashoffset: 100;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes completion-message-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes completion-message-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes completion-bg-pulse {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
