@@ -3,10 +3,10 @@
 ## Session 5 - January 11, 2026
 
 ### Summary
-Implemented Feed page, channel session tracking, learning model data collection, Learning Insights UI, signal override toggles, learning model reset, optimal time suggestion, spaced repetition tracking, and review notifications. Progress increased from 108/415 to 118/415 (28.4%).
+Implemented Feed page, channel session tracking, learning model data collection, Learning Insights UI, signal override toggles, learning model reset, optimal time suggestion, spaced repetition tracking, review notifications, SM-2 algorithm, and mastery levels. Progress increased from 108/415 to 121/415 (29.2%).
 
 ### Current Progress
-- **Passing**: 118/415 features (28.4%)
+- **Passing**: 121/415 features (29.2%)
 - **Phase**: 2
 
 ### Session 5 Implemented Features
@@ -73,6 +73,18 @@ Implemented Feed page, channel session tracking, learning model data collection,
 - "Review Now" link to Library page
 - Dismissible notification
 
+#### 11. SM-2 Algorithm Implementation - Feature #522, #523
+- Review performance affects next interval
+- Correct answers (quality >= 3) increase interval
+- Incorrect answers (quality < 3) reset to 1 day
+- Ease factor adjusts based on performance
+
+#### 12. Mastery Level Progression - Feature #524
+- INTRODUCED → DEVELOPING (1+ reviews)
+- DEVELOPING → FAMILIAR (3+ reviews with quality >= 3)
+- FAMILIAR → MASTERED (5+ reviews with quality >= 4)
+- Full progression tested and verified
+
 ### Infrastructure Changes
 - Updated CORS to support multiple frontend ports (5173, 5174, 5175)
 - Added POST /api/sessions/:id/complete endpoint
@@ -104,6 +116,7 @@ Priority items to implement:
 - `1e1e099` - feat: Add learning model reset functionality
 - `8210381` - docs: Update progress to 116/415 (28.0%)
 - `aad7bec` - feat: Add review due notification banner
+- `20a8799` - docs: Update progress with spaced repetition features
 
 ### Screenshots Taken
 - feed-empty-state.png
