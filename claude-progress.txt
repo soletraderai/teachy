@@ -1,77 +1,46 @@
 # Teachy Phase 2 - Progress Report
 
-## Session 3 - January 11, 2026 (Final Update)
+## Session 4 - January 11, 2026
 
 ### Summary
-Implemented frontend authentication pages (Login, Signup, ForgotPassword, ResetPassword, EmailVerification). Created authStore for state management. All auth pages working with neobrutalism design. Verified login flow through browser automation.
+Implemented Pricing page, subscription tier badge, and tutor personality selector with tier-based restrictions. Progress increased from 102/415 to 107/415 (25.8%).
 
 ### Current Progress
-- **Passing**: 102/415 features (24.6%)
+- **Passing**: 107/415 features (25.8%)
 - **Phase**: 2
 
-### Session 3 Implemented Features
+### Session 4 Implemented Features
 
-#### Frontend Auth Pages (5 pages created)
-1. **Login page** (`/login`)
-   - Email/password form with validation
-   - Error display for invalid credentials
-   - Google OAuth button (placeholder)
-   - Link to forgot password
-   - Link to signup
-   - Success redirect to home page
+#### 1. Pricing Page (`/pricing`) - Feature #493
+- Free vs Pro tier comparison
+- Monthly/yearly pricing toggle with savings display
+- Feature lists for each tier
+- FAQ section
+- Neobrutalism design with bold cards
 
-2. **Signup page** (`/signup`)
-   - Display name, email, password, confirm password
-   - Client-side validation
-   - Password match validation
-   - Terms/Privacy links
-   - Google OAuth button (placeholder)
+#### 2. Subscription Tier Badge - Feature #497
+- Shows FREE or PRO badge in navigation
+- FREE badge with neutral styling
+- PRO badge with cyan accent color
+- Visible on both desktop and mobile navigation
 
-3. **Forgot Password page** (`/forgot-password`)
-   - Email input with validation
-   - Success state with confirmation message
-   - Link back to login
+#### 3. Tutor Personality Selection - Features #499, #500
+- 4 personality options: Professor, Coach, Direct, Creative
+- Each option has label, description, and preview quote
+- Visual card-based selector with neobrutalism styling
 
-4. **Reset Password page** (`/reset-password`)
-   - Token from URL query parameter
-   - New password + confirm password
-   - Invalid token error handling
-   - Success state with redirect to login
-
-5. **Email Verification page** (`/verify-email/:token`)
-   - Auto-verification on page load
-   - Loading, success, and error states
-   - Updates user state when logged in
-
-#### Auth Store Created
-- `src/stores/authStore.ts` with Zustand
-- User state management (id, email, displayName, tier, etc.)
-- Access token storage
-- API helper functions for all auth endpoints
-- Persistent storage in localStorage
-
-### Routes Added to App.tsx
-- `/login` - Login page
-- `/signup` - Signup page
-- `/forgot-password` - Forgot password page
-- `/reset-password` - Reset password with token
-- `/verify-email/:token` - Email verification
-
-### Verified Working
-- Login with valid credentials (tested with logintest123@example.com)
-- Login error display for wrong password
-- Form validation (browser native + custom)
-- Auth state persistence in localStorage
-- Redirect to home after successful login
-- All navigation links between auth pages work
+#### 4. Tier-Based Personality Restrictions - Feature #502
+- Free users limited to Coach personality only
+- Professor, Direct, and Creative show PRO badge
+- Locked personalities are disabled with visual dimming
+- Pro users have access to all personalities
 
 ### Features Skipped This Session
-Many features were skipped because they depend on:
-1. **Dashboard implementation** - Features 451-461, 480-481 require a dashboard page
-2. **Onboarding flow** - Features 447-450 require onboarding screens
-3. **Session completion** - Features 462-472 require completing learning sessions
-4. **Email automation** - Features 473-474 require scheduled email jobs
-5. **Source panel** - Features 475-479 require active learning sessions
+Many features require dashboard or other infrastructure:
+- Dashboard-related features (#481-485) - Need dashboard page
+- Commitment tracking features - Need dashboard
+- Stripe checkout features (#494-496) - Need Stripe configuration
+- Tutor personality applied (#501) - Need AI prompt integration
 
 ### Services Running
 - PostgreSQL: localhost:5432 (healthy)
@@ -81,27 +50,27 @@ Many features were skipped because they depend on:
 - Frontend: localhost:5173 (Vite React)
 
 ### Database Test Users
-- logintest123@example.com (Password: NewSecurePass456, email verified)
-- userB_isolation_test@example.com (Password: SecurePassword123, created for session isolation test)
+- logintest123@example.com (Password: NewSecurePass456, email verified, FREE tier)
+- userB_isolation_test@example.com (Password: SecurePassword123)
 
 ### Notes for Next Session
 Priority items to implement:
-1. **Dashboard page** - Create authenticated dashboard view to unlock many features
-2. **Protected route wrapper** - Redirect unauthenticated users to login
-3. **Onboarding flow** - 10 screens for new user setup
-4. **Logout button** - Add to navigation when authenticated
-5. **Token refresh** - Add interceptor for automatic token refresh
-
-The auth pages foundation is complete. Next session should focus on the dashboard and protected routes to unblock the queue of dashboard-related features.
+1. **Dashboard page** - Many features blocked by this
+2. **Logout button** - Add to navigation when authenticated
+3. **Protected routes** - Redirect unauthenticated users
 
 ### Commits This Session
-- `bae982c` - feat: Add frontend authentication pages (Login, Signup, ForgotPassword, ResetPassword, EmailVerification, authStore)
+- `0c888de` - feat: Add pricing page, subscription tier badge, and tutor personality selector
+- `75c90a0` - feat: Add tier-based tutor personality restrictions
 
 ### Screenshots Taken
-- login-page.png
-- login-filled.png
-- login-success-redirect.png
-- login-error-wrong-password.png
-- login-validation-error.png
-- signup-page.png
-- forgot-password-page.png
+- pricing-page-monthly.png
+- pricing-page-yearly.png
+- pricing-page-faq.png
+- tier-badge-free.png
+- tier-badge-pro.png
+- tutor-personality-selector.png
+- tutor-personality-all-options.png
+- tutor-personality-coach-selected.png
+- free-tier-coach-only.png
+- free-tier-all-personalities.png
