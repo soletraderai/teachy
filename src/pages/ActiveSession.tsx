@@ -11,6 +11,27 @@ import { evaluateAnswer, RateLimitError, generateFallbackFeedback } from '../ser
 import type { ChatMessage } from '../types';
 
 type SessionPhase = 'question' | 'feedback' | 'summary';
+type FeedbackType = 'excellent' | 'good' | 'needs-improvement';
+
+// Detect feedback sentiment based on opening phrases
+function detectFeedbackType(feedback: string): FeedbackType {
+  const lowerFeedback = feedback.toLowerCase();
+  const excellentPhrases = ['great answer', 'excellent', 'perfect', 'spot on', 'exactly right', 'you nailed'];
+  const goodPhrases = ['good thinking', 'good answer', 'nice work', 'well done', 'solid', 'on the right track'];
+  const improvementPhrases = ['not quite', 'close', 'almost', 'partially', 'let me clarify', 'actually', 'however'];
+
+  if (excellentPhrases.some(phrase => lowerFeedback.includes(phrase))) {
+    return 'excellent';
+  }
+  if (improvementPhrases.some(phrase => lowerFeedback.includes(phrase))) {
+    return 'needs-improvement';
+  }
+  if (goodPhrases.some(phrase => lowerFeedback.includes(phrase))) {
+    return 'good';
+  }
+  // Default to good for neutral feedback
+  return 'good';
+}
 
 export default function ActiveSession() {
   const { sessionId } = useParams();
@@ -410,54 +431,125 @@ export default function ActiveSession() {
       )}
 
       {/* Feedback Phase */}
-      {phase === 'feedback' && currentQuestion.feedback && (
-        <Card className="animate-fade-in">
-          <div className="space-y-6">
-            {/* Success Animation */}
-            <div className="flex justify-center animate-scale-in">
-              <div className="relative">
-                <div className="w-20 h-20 rounded-full bg-success/20 flex items-center justify-center animate-pulse-subtle">
-                  <div className="w-14 h-14 rounded-full bg-success/40 flex items-center justify-center">
-                    <svg
-                      className="w-8 h-8 text-success animate-check-draw"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={3}
-                    >
-                      <path className="animate-check-path" d="M5 13l4 4L19 7" />
-                    </svg>
+      {phase === 'feedback' && currentQuestion.feedback && (() => {
+        const feedbackType = detectFeedbackType(currentQuestion.feedback);
+        const isExcellent = feedbackType === 'excellent';
+        const needsImprovement = feedbackType === 'needs-improvement';
+
+        // Color schemes based on feedback type
+        const colors = {
+          excellent: {
+            bg: 'bg-success/20',
+            inner: 'bg-success/40',
+            icon: 'text-success',
+            glow: 'bg-success/10',
+            heading: 'text-success',
+          },
+          good: {
+            bg: 'bg-primary/20',
+            inner: 'bg-primary/40',
+            icon: 'text-text',
+            glow: 'bg-primary/10',
+            heading: 'text-primary',
+          },
+          'needs-improvement': {
+            bg: 'bg-secondary/20',
+            inner: 'bg-secondary/40',
+            icon: 'text-text',
+            glow: 'bg-secondary/10',
+            heading: 'text-secondary',
+          },
+        };
+
+        const c = colors[feedbackType];
+
+        return (
+          <Card className="animate-fade-in">
+            <div className="space-y-6">
+              {/* Feedback Animation */}
+              <div className="flex justify-center animate-scale-in">
+                <div className="relative">
+                  <div className={`w-20 h-20 rounded-full ${c.bg} flex items-center justify-center animate-pulse-subtle`}>
+                    <div className={`w-14 h-14 rounded-full ${c.inner} flex items-center justify-center`}>
+                      {isExcellent ? (
+                        /* Checkmark for excellent answers */
+                        <svg
+                          className={`w-8 h-8 ${c.icon} animate-check-draw`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={3}
+                        >
+                          <path className="animate-check-path" d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : needsImprovement ? (
+                        /* Lightbulb for learning opportunity */
+                        <svg
+                          className={`w-8 h-8 ${c.icon}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                        >
+                          <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                      ) : (
+                        /* Thumbs up for good answers */
+                        <svg
+                          className={`w-8 h-8 ${c.icon}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                        >
+                          <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
+                        </svg>
+                      )}
+                    </div>
                   </div>
+                  {/* Subtle glow effect */}
+                  <div className={`absolute inset-0 rounded-full ${c.glow} animate-ping-slow opacity-0`} />
                 </div>
-                {/* Subtle glow effect */}
-                <div className="absolute inset-0 rounded-full bg-success/10 animate-ping-slow opacity-0" />
               </div>
-            </div>
 
-            <div className="animate-slide-up delay-100">
-              <h2 className="font-heading text-lg font-bold text-text mb-2">
-                Your Answer
-              </h2>
-              <p className="text-text bg-surface p-3 border-2 border-border">
-                {currentQuestion.userAnswer}
-              </p>
-            </div>
+              {/* Encouraging message for needs-improvement */}
+              {needsImprovement && (
+                <div className="text-center animate-slide-up">
+                  <p className="text-text/70 text-sm italic">
+                    Every question is a learning opportunity! 💡
+                  </p>
+                </div>
+              )}
 
-            <div className="animate-slide-up delay-200">
-              <h2 className="font-heading text-lg font-bold text-success mb-2">
-                Feedback
-              </h2>
-              <p className="text-text">{currentQuestion.feedback}</p>
-            </div>
+              <div className="animate-slide-up delay-100">
+                <h2 className="font-heading text-lg font-bold text-text mb-2">
+                  Your Answer
+                </h2>
+                <p className="text-text bg-surface p-3 border-2 border-border">
+                  {currentQuestion.userAnswer}
+                </p>
+              </div>
 
-            <Button onClick={handleContinueToSummary} className="w-full animate-slide-up delay-300">
-              Continue to Summary
-            </Button>
-          </div>
-        </Card>
-      )}
+              <div className="animate-slide-up delay-200">
+                <h2 className={`font-heading text-lg font-bold ${c.heading} mb-2`}>
+                  Feedback
+                </h2>
+                <p className="text-text">{currentQuestion.feedback}</p>
+              </div>
+
+              <Button onClick={handleContinueToSummary} className="w-full animate-slide-up delay-300">
+                Continue to Summary
+              </Button>
+            </div>
+          </Card>
+        );
+      })()}
 
       {/* Summary Phase */}
       {phase === 'summary' && (
