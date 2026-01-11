@@ -1,14 +1,44 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ErrorBoundary from './ErrorBoundary';
 import OfflineBanner from './OfflineBanner';
 import Breadcrumb from './Breadcrumb';
 import { useAuthStore } from '../../stores/authStore';
 
+const API_BASE = 'http://localhost:3001/api';
+
 export default function Layout() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, isAuthenticated } = useAuthStore();
+  const [dueTopicsCount, setDueTopicsCount] = useState(0);
+  const [showReviewBanner, setShowReviewBanner] = useState(true);
+
+  // Fetch topics due for review
+  useEffect(() => {
+    const fetchDueTopics = async () => {
+      if (!isAuthenticated()) return;
+
+      try {
+        const { accessToken } = useAuthStore.getState();
+        const response = await fetch(`${API_BASE}/topics/due-for-review`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const topics = await response.json();
+          setDueTopicsCount(topics.length);
+        }
+      } catch (err) {
+        console.error('Failed to fetch due topics:', err);
+      }
+    };
+
+    fetchDueTopics();
+  }, [isAuthenticated, location.pathname]);
 
   const navLinks = [
     { to: '/', label: 'Home' },
@@ -26,6 +56,41 @@ export default function Layout() {
     <div className="min-h-screen bg-background">
       {/* Offline Banner */}
       <OfflineBanner />
+
+      {/* Review Due Notification Banner */}
+      {isAuthenticated() && dueTopicsCount > 0 && showReviewBanner && (
+        <div className="bg-secondary border-b-3 border-border">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5 text-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="font-heading font-semibold text-text">
+                  You have <strong>{dueTopicsCount}</strong> topic{dueTopicsCount !== 1 ? 's' : ''} due for review!
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/library"
+                  className="px-3 py-1 bg-primary border-2 border-border font-heading font-semibold text-sm hover:shadow-brutal transition-all"
+                >
+                  Review Now
+                </Link>
+                <button
+                  onClick={() => setShowReviewBanner(false)}
+                  className="p-1 hover:bg-background/50 transition-colors"
+                  aria-label="Dismiss notification"
+                >
+                  <svg className="w-4 h-4 text-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Skip to main content link for accessibility */}
       <a
