@@ -36,6 +36,42 @@ interface LearningModelData {
 
 const API_BASE = 'http://localhost:3001/api';
 
+// Signal Toggle Component
+interface SignalToggleProps {
+  label: string;
+  description: string;
+  signal: string;
+  enabled: boolean;
+  onToggle: (signal: string, enabled: boolean) => void;
+}
+
+function SignalToggle({ label, description, signal, enabled, onToggle }: SignalToggleProps) {
+  return (
+    <div className="flex items-center justify-between p-3 bg-background border border-border/50">
+      <div>
+        <p className="font-heading font-semibold text-text text-sm">{label}</p>
+        <p className="text-xs text-text/60">{description}</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => onToggle(signal, !enabled)}
+        className={`relative w-12 h-6 rounded-none border-2 border-border transition-colors ${
+          enabled ? 'bg-primary' : 'bg-surface'
+        }`}
+        role="switch"
+        aria-checked={enabled}
+        aria-label={`Toggle ${label}`}
+      >
+        <span
+          className={`absolute top-0.5 left-0.5 w-4 h-4 bg-text transition-transform ${
+            enabled ? 'translate-x-6' : 'translate-x-0'
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
 const tutorPersonalityOptions: {
   value: TutorPersonality;
   label: string;
@@ -134,6 +170,42 @@ export default function Settings() {
 
     fetchLearningModel();
   }, [isAuthenticated]);
+
+  // Handle signal toggle
+  const handleSignalToggle = async (signal: string, enabled: boolean) => {
+    try {
+      const { accessToken } = useAuthStore.getState();
+      const response = await fetch(`${API_BASE}/learning-model/signals`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify({ signal, enabled }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setLearningModel((prev) => {
+          if (!prev || !prev.signals) return prev;
+          return {
+            ...prev,
+            signals: {
+              ...prev.signals,
+              [signal]: enabled,
+            },
+          };
+        });
+        setToast({ message: `${enabled ? 'Enabled' : 'Disabled'} ${signal} tracking`, type: 'success' });
+      } else {
+        setToast({ message: 'Failed to update signal setting', type: 'error' });
+      }
+    } catch (err) {
+      console.error('Failed to toggle signal:', err);
+      setToast({ message: 'Failed to update signal setting', type: 'error' });
+    }
+  };
 
   // Track if form has unsaved changes
   useEffect(() => {
@@ -524,6 +596,51 @@ export default function Settings() {
                         </span>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Signal Toggles */}
+              {learningModel.signals && (
+                <div className="border-t-3 border-border pt-6">
+                  <p className="font-heading font-semibold text-text mb-2">Data Collection Settings</p>
+                  <p className="text-sm text-text/60 mb-4">Choose which signals the learning model uses to personalize your experience.</p>
+                  <div className="space-y-3">
+                    <SignalToggle
+                      label="Time of Day"
+                      description="Track when you learn best"
+                      signal="timeOfDay"
+                      enabled={learningModel.signals.timeOfDay}
+                      onToggle={handleSignalToggle}
+                    />
+                    <SignalToggle
+                      label="Session Duration"
+                      description="Track your preferred session length"
+                      signal="sessionDuration"
+                      enabled={learningModel.signals.sessionDuration}
+                      onToggle={handleSignalToggle}
+                    />
+                    <SignalToggle
+                      label="Difficulty"
+                      description="Track your preferred difficulty level"
+                      signal="difficulty"
+                      enabled={learningModel.signals.difficulty}
+                      onToggle={handleSignalToggle}
+                    />
+                    <SignalToggle
+                      label="Pacing"
+                      description="Track your learning pace preferences"
+                      signal="pacing"
+                      enabled={learningModel.signals.pacing}
+                      onToggle={handleSignalToggle}
+                    />
+                    <SignalToggle
+                      label="Device"
+                      description="Track device-specific patterns"
+                      signal="device"
+                      enabled={learningModel.signals.device}
+                      onToggle={handleSignalToggle}
+                    />
                   </div>
                 </div>
               )}

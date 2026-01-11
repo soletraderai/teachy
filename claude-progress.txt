@@ -3,10 +3,10 @@
 ## Session 5 - January 11, 2026
 
 ### Summary
-Implemented Feed page, channel session tracking, learning model data collection, and Learning Insights UI. Progress increased from 108/415 to 112/415 (27.0%).
+Implemented Feed page, channel session tracking, learning model data collection, Learning Insights UI, and signal override toggles. Progress increased from 108/415 to 113/415 (27.2%).
 
 ### Current Progress
-- **Passing**: 112/415 features (27.0%)
+- **Passing**: 113/415 features (27.2%)
 - **Phase**: 2
 
 ### Session 5 Implemented Features
@@ -37,6 +37,13 @@ Implemented Feed page, channel session tracking, learning model data collection,
 - Shows Sessions Analyzed count
 - Shows Model Confidence with progress bar
 - Shows Recent Learning Patterns list
+
+#### 5. Learning Model Signal Toggles - Feature #514
+- Added Data Collection Settings section to Settings page
+- SignalToggle component with neobrutalism design
+- Toggle switches for: Time of Day, Session Duration, Difficulty, Pacing, Device
+- API integration to enable/disable individual signals
+- Toast notifications for toggle changes
 
 ### Infrastructure Changes
 - Updated CORS to support multiple frontend ports (5173, 5174, 5175)
@@ -71,3 +78,5 @@ Priority items to implement:
 - feed-after-unfollow.png
 - feed-session-count-updated.png
 - settings-learning-insights.png
+- settings-signal-toggles.png
+- settings-signal-toggle-disabled.png
