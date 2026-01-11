@@ -141,6 +141,8 @@ export default function Settings() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [learningModel, setLearningModel] = useState<LearningModelData | null>(null);
   const [loadingInsights, setLoadingInsights] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resettingModel, setResettingModel] = useState(false);
 
   // Fetch learning model data
   useEffect(() => {
@@ -204,6 +206,34 @@ export default function Settings() {
     } catch (err) {
       console.error('Failed to toggle signal:', err);
       setToast({ message: 'Failed to update signal setting', type: 'error' });
+    }
+  };
+
+  // Handle reset learning model
+  const handleResetModel = async () => {
+    setResettingModel(true);
+    try {
+      const { accessToken } = useAuthStore.getState();
+      const response = await fetch(`${API_BASE}/learning-model`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        setLearningModel({ hasData: false, message: 'No learning data yet. Complete more sessions to build your profile.' });
+        setShowResetConfirm(false);
+        setToast({ message: 'Learning model has been reset', type: 'success' });
+      } else {
+        setToast({ message: 'Failed to reset learning model', type: 'error' });
+      }
+    } catch (err) {
+      console.error('Failed to reset model:', err);
+      setToast({ message: 'Failed to reset learning model', type: 'error' });
+    } finally {
+      setResettingModel(false);
     }
   };
 
@@ -355,6 +385,39 @@ export default function Settings() {
           type={toast.type}
           onClose={() => setToast(null)}
         />
+      )}
+
+      {/* Reset Confirmation Modal */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-background border-3 border-border shadow-brutal max-w-md w-full p-6">
+            <h3 className="font-heading text-xl font-bold text-text mb-3">
+              Reset Learning Model?
+            </h3>
+            <p className="text-text/70 mb-6">
+              Are you sure you want to reset your learning model? This will delete all your learning patterns and insights. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="danger"
+                onClick={handleResetModel}
+                loading={resettingModel}
+                disabled={resettingModel}
+                className="flex-1"
+              >
+                Yes, Reset Model
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setShowResetConfirm(false)}
+                disabled={resettingModel}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       <h1 className="font-heading text-3xl font-bold text-text mb-6">
@@ -644,6 +707,22 @@ export default function Settings() {
                   </div>
                 </div>
               )}
+
+              {/* Reset Model Section */}
+              <div className="border-t-3 border-border pt-6">
+                <p className="font-heading font-semibold text-text mb-2">Reset Learning Model</p>
+                <p className="text-sm text-text/60 mb-4">
+                  This will permanently delete all your learning data and patterns. This action cannot be undone.
+                </p>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => setShowResetConfirm(true)}
+                  disabled={resettingModel}
+                >
+                  Reset Model
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="text-center py-8">
