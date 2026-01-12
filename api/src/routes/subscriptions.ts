@@ -168,6 +168,80 @@ router.post('/dev-upgrade', async (req: AuthenticatedRequest, res: Response, nex
   }
 });
 
+// POST /api/subscriptions/dev-cancel - Development mode subscription cancellation
+router.post('/dev-cancel', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    // Only allow in development mode
+    if (process.env.NODE_ENV === 'production') {
+      throw new AppError(403, 'Not available in production', 'NOT_ALLOWED');
+    }
+
+    const subscription = await prisma.subscription.findUnique({
+      where: { userId: req.user!.id },
+    });
+
+    if (!subscription || subscription.tier !== 'PRO') {
+      throw new AppError(400, 'No active Pro subscription found', 'NO_SUBSCRIPTION');
+    }
+
+    // Set cancelAtPeriodEnd to true - user keeps access until period end
+    await prisma.subscription.update({
+      where: { userId: req.user!.id },
+      data: {
+        cancelAtPeriodEnd: true,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Subscription will cancel at period end',
+      cancelAtPeriodEnd: true,
+      currentPeriodEnd: subscription.currentPeriodEnd?.toISOString(),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/subscriptions/dev-reactivate - Development mode subscription reactivation
+router.post('/dev-reactivate', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    // Only allow in development mode
+    if (process.env.NODE_ENV === 'production') {
+      throw new AppError(403, 'Not available in production', 'NOT_ALLOWED');
+    }
+
+    const subscription = await prisma.subscription.findUnique({
+      where: { userId: req.user!.id },
+    });
+
+    if (!subscription || subscription.tier !== 'PRO') {
+      throw new AppError(400, 'No Pro subscription found', 'NO_SUBSCRIPTION');
+    }
+
+    if (!subscription.cancelAtPeriodEnd) {
+      throw new AppError(400, 'Subscription is not scheduled for cancellation', 'NOT_CANCELLED');
+    }
+
+    // Reactivate subscription by setting cancelAtPeriodEnd to false
+    await prisma.subscription.update({
+      where: { userId: req.user!.id },
+      data: {
+        cancelAtPeriodEnd: false,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Subscription reactivated successfully',
+      cancelAtPeriodEnd: false,
+      currentPeriodEnd: subscription.currentPeriodEnd?.toISOString(),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // POST /api/subscriptions/verify - Verify checkout session
 router.post('/verify', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {

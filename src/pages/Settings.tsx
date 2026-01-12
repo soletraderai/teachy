@@ -139,7 +139,6 @@ export default function Settings() {
 
   const [formData, setFormData] = useState({
     userName: settings.userName,
-    geminiApiKey: settings.geminiApiKey,
     language: settings.language,
     tutorPersonality: settings.tutorPersonality || 'PROFESSOR',
     learningStyle: settings.learningStyle || 'visual',
@@ -168,6 +167,42 @@ export default function Settings() {
   const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [showCancelSubscriptionConfirm, setShowCancelSubscriptionConfirm] = useState(false);
+  const [cancellingSubscription, setCancellingSubscription] = useState(false);
+  const [reactivatingSubscription, setReactivatingSubscription] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<{
+    cancelAtPeriodEnd: boolean;
+    currentPeriodEnd: string | null;
+  }>({ cancelAtPeriodEnd: false, currentPeriodEnd: null });
+
+  // Fetch subscription status
+  useEffect(() => {
+    const fetchSubscriptionStatus = async () => {
+      if (!isAuthenticated() || !isPro) return;
+
+      try {
+        const { accessToken } = useAuthStore.getState();
+        const response = await fetch(`${API_BASE}/subscriptions/status`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setSubscriptionStatus({
+            cancelAtPeriodEnd: data.cancelAtPeriodEnd || false,
+            currentPeriodEnd: data.currentPeriodEnd || null,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch subscription status:', err);
+      }
+    };
+
+    fetchSubscriptionStatus();
+  }, [isAuthenticated, isPro]);
 
   // Fetch learning model data
   useEffect(() => {
@@ -266,7 +301,6 @@ export default function Settings() {
   useEffect(() => {
     const hasChanges =
       formData.userName !== settings.userName ||
-      formData.geminiApiKey !== settings.geminiApiKey ||
       formData.language !== settings.language ||
       formData.tutorPersonality !== (settings.tutorPersonality || 'PROFESSOR');
     setIsDirty(hasChanges);
@@ -294,14 +328,6 @@ export default function Settings() {
       newErrors.userName = 'Username is required';
     } else if (trimmedName.length > 50) {
       newErrors.userName = 'Username must be 50 characters or less';
-    }
-
-    // API Key validation
-    const trimmedKey = formData.geminiApiKey.trim();
-    if (!trimmedKey) {
-      newErrors.geminiApiKey = 'API key is required';
-    } else if (trimmedKey.length < 10) {
-      newErrors.geminiApiKey = 'API key seems too short';
     }
 
     // Language validation
@@ -333,7 +359,6 @@ export default function Settings() {
         },
         body: JSON.stringify({
           userName: formData.userName,
-          geminiApiKey: formData.geminiApiKey,
           language: formData.language,
         }),
       });
@@ -353,7 +378,6 @@ export default function Settings() {
       // Save settings after server validation passes
       setSettings({
         userName: formData.userName.trim(),
-        geminiApiKey: formData.geminiApiKey.trim(),
         language: formData.language,
         tutorPersonality: formData.tutorPersonality as TutorPersonality,
       });
@@ -366,7 +390,6 @@ export default function Settings() {
         // Network error - server unavailable, proceed with client-only validation
         setSettings({
           userName: formData.userName.trim(),
-          geminiApiKey: formData.geminiApiKey.trim(),
           language: formData.language,
           tutorPersonality: formData.tutorPersonality as TutorPersonality,
         });
@@ -516,6 +539,70 @@ export default function Settings() {
     }
   };
 
+  // Handle cancel subscription
+  const handleCancelSubscription = async () => {
+    setCancellingSubscription(true);
+    try {
+      const { accessToken } = useAuthStore.getState();
+      const response = await fetch(`${API_BASE}/subscriptions/dev-cancel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSubscriptionStatus({
+          cancelAtPeriodEnd: true,
+          currentPeriodEnd: data.currentPeriodEnd || null,
+        });
+        setShowCancelSubscriptionConfirm(false);
+        setToast({ message: 'Subscription will cancel at end of billing period', type: 'success' });
+      } else {
+        const data = await response.json();
+        setToast({ message: data.message || 'Failed to cancel subscription', type: 'error' });
+      }
+    } catch (err) {
+      console.error('Failed to cancel subscription:', err);
+      setToast({ message: 'Failed to cancel subscription', type: 'error' });
+    } finally {
+      setCancellingSubscription(false);
+    }
+  };
+
+  // Handle reactivate subscription
+  const handleReactivateSubscription = async () => {
+    setReactivatingSubscription(true);
+    try {
+      const { accessToken } = useAuthStore.getState();
+      const response = await fetch(`${API_BASE}/subscriptions/dev-reactivate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        setSubscriptionStatus((prev) => ({
+          ...prev,
+          cancelAtPeriodEnd: false,
+        }));
+        setToast({ message: 'Subscription reactivated! Your Pro access will continue.', type: 'success' });
+      } else {
+        const data = await response.json();
+        setToast({ message: data.message || 'Failed to reactivate subscription', type: 'error' });
+      }
+    } catch (err) {
+      console.error('Failed to reactivate subscription:', err);
+      setToast({ message: 'Failed to reactivate subscription', type: 'error' });
+    } finally {
+      setReactivatingSubscription(false);
+    }
+  };
+
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -587,6 +674,49 @@ export default function Settings() {
                 className="flex-1"
               >
                 Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Subscription Confirmation Modal */}
+      {showCancelSubscriptionConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 modal-overlay">
+          <div className="bg-background border-3 border-border shadow-brutal max-w-md w-full p-6 modal-content">
+            <h3 className="font-heading text-xl font-bold text-text mb-3">
+              Cancel Subscription?
+            </h3>
+            <p className="text-text/70 mb-4">
+              Are you sure you want to cancel your Pro subscription?
+            </p>
+            <div className="p-4 bg-primary/10 border-2 border-primary/30 mb-6">
+              <p className="text-sm text-text">
+                <strong>You'll keep Pro access</strong> until the end of your current billing period
+                {subscriptionStatus.currentPeriodEnd && (
+                  <span className="block mt-1 text-text/70">
+                    ({new Date(subscriptionStatus.currentPeriodEnd).toLocaleDateString()})
+                  </span>
+                )}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="danger"
+                onClick={handleCancelSubscription}
+                loading={cancellingSubscription}
+                disabled={cancellingSubscription}
+                className="flex-1"
+              >
+                Yes, Cancel Subscription
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setShowCancelSubscriptionConfirm(false)}
+                disabled={cancellingSubscription}
+                className="flex-1"
+              >
+                Keep Pro
               </Button>
             </div>
           </div>
@@ -722,30 +852,6 @@ export default function Settings() {
             error={errors.userName}
             required
             maxLength={50}
-          />
-
-          {/* API Key */}
-          <Input
-            label="Gemini API Key"
-            type="password"
-            placeholder="Enter your Gemini API key"
-            value={formData.geminiApiKey}
-            onChange={(e) => handleInputChange('geminiApiKey', e.target.value)}
-            error={errors.geminiApiKey}
-            required
-            helperText={
-              <span>
-                Get your API key from{' '}
-                <a
-                  href="https://makersuite.google.com/app/apikey"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-secondary underline hover:no-underline"
-                >
-                  Google AI Studio
-                </a>
-              </span>
-            }
           />
 
           {/* Language */}
@@ -1119,21 +1225,67 @@ export default function Settings() {
 
             {/* Manage Subscription Link */}
             {isPro && (
-              <div className="pt-4 border-t border-border/30">
+              <div className="pt-4 border-t border-border/30 space-y-4">
+                {/* Cancellation Status Banner */}
+                {subscriptionStatus.cancelAtPeriodEnd && (
+                  <div className="p-4 bg-warning/20 border-2 border-warning/50">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-warning shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="font-heading font-semibold text-text">Subscription Cancelling</p>
+                        <p className="text-sm text-text/70 mb-3">
+                          Your Pro access will end on{' '}
+                          {subscriptionStatus.currentPeriodEnd
+                            ? new Date(subscriptionStatus.currentPeriodEnd).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                              })
+                            : 'the end of your billing period'}
+                        </p>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={handleReactivateSubscription}
+                          loading={reactivatingSubscription}
+                          disabled={reactivatingSubscription}
+                        >
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Reactivate Subscription
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-heading font-semibold text-text">Manage Subscription</p>
-                    <p className="text-sm text-text/60">View billing, change plan, or cancel</p>
+                    <p className="text-sm text-text/60">View billing or cancel your subscription</p>
                   </div>
-                  <a
-                    href="/pricing"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-surface border-2 border-border text-sm font-heading font-semibold hover:bg-primary/30 hover:shadow-brutal-sm transition-all"
-                  >
-                    Manage
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
+                  <div className="flex gap-2">
+                    {!subscriptionStatus.cancelAtPeriodEnd && (
+                      <button
+                        onClick={() => setShowCancelSubscriptionConfirm(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-surface border-2 border-danger/50 text-sm font-heading font-semibold text-danger hover:bg-danger/10 hover:shadow-brutal-sm transition-all"
+                      >
+                        Cancel Subscription
+                      </button>
+                    )}
+                    <a
+                      href="/pricing"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-surface border-2 border-border text-sm font-heading font-semibold hover:bg-primary/30 hover:shadow-brutal-sm transition-all"
+                    >
+                      View Plans
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </div>
                 </div>
               </div>
             )}
@@ -1141,18 +1293,6 @@ export default function Settings() {
         </Card>
       )}
 
-      {/* API Key Info */}
-      <Card className="mt-6 bg-secondary/10">
-        <h2 className="font-heading text-lg font-bold text-text mb-2">
-          About your API Key
-        </h2>
-        <ul className="list-disc list-inside space-y-1 text-sm text-text/80">
-          <li>Your API key is stored locally in your browser</li>
-          <li>It is never sent to any server except Google's Gemini API</li>
-          <li>You can get a free API key from Google AI Studio</li>
-          <li>Clear your browser data to remove stored settings</li>
-        </ul>
-      </Card>
 
       {/* Learning Insights */}
       {isAuthenticated() && (

@@ -11,10 +11,10 @@ const pricingPlans = {
     price: { monthly: 0, yearly: 0 },
     description: 'Perfect for casual learners getting started',
     features: [
-      '5 learning sessions per month',
-      'Basic question generation',
+      '3 learning sessions per month',
+      '10 questions per session',
+      'Coach personality only',
       'Session history (last 10)',
-      'Standard response quality',
       'Community support',
     ],
     limitations: [
