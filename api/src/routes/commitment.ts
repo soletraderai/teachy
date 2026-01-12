@@ -4,25 +4,44 @@ import { AuthenticatedRequest } from '../middleware/auth.js';
 
 const router = Router();
 
+// Helper function to get the start of day in user's timezone
+function getStartOfDayInTimezone(timezone: string = 'America/New_York'): Date {
+  // Get current time in user's timezone
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const localDateStr = formatter.format(now); // YYYY-MM-DD format
+
+  // Create a date at midnight UTC for that local date
+  // This ensures consistent date comparison across timezones
+  const [year, month, day] = localDateStr.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+}
+
 // GET /api/commitment/today
 router.get('/today', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // First get user preferences to determine their timezone
+    const preferences = await prisma.userPreferences.findUnique({
+      where: { userId: req.user!.id },
+    });
 
-    const [preferences, record] = await Promise.all([
-      prisma.userPreferences.findUnique({
-        where: { userId: req.user!.id },
-      }),
-      prisma.dailyRecord.findUnique({
-        where: {
-          userId_date: {
-            userId: req.user!.id,
-            date: today,
-          },
+    // Get today's date in user's timezone
+    const userTimezone = preferences?.timezone || 'America/New_York';
+    const today = getStartOfDayInTimezone(userTimezone);
+
+    const record = await prisma.dailyRecord.findUnique({
+      where: {
+        userId_date: {
+          userId: req.user!.id,
+          date: today,
         },
-      }),
-    ]);
+      },
+    });
 
     const baseTargetMinutes = preferences?.dailyCommitmentMinutes || 15;
     const busyWeekMode = record?.busyWeekMode || false;
@@ -45,6 +64,7 @@ router.get('/today', async (req: AuthenticatedRequest, res: Response, next: Next
       sessionsCompleted: record?.sessionsCompleted || 0,
       busyWeekMode,
       vacationMode,
+      timezone: userTimezone,
     });
   } catch (error) {
     next(error);
@@ -57,9 +77,18 @@ router.get('/calendar', async (req: AuthenticatedRequest, res: Response, next: N
     const { view = 'week' } = req.query;
     const days = view === 'month' ? 30 : 7;
 
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-    startDate.setHours(0, 0, 0, 0);
+    // Get user preferences to determine timezone
+    const preferences = await prisma.userPreferences.findUnique({
+      where: { userId: req.user!.id },
+    });
+    const userTimezone = preferences?.timezone || 'America/New_York';
+
+    // Get today in user's timezone
+    const today = getStartOfDayInTimezone(userTimezone);
+
+    // Calculate start date (days ago from today)
+    const startDate = new Date(today);
+    startDate.setUTCDate(startDate.getUTCDate() - days);
 
     const records = await prisma.dailyRecord.findMany({
       where: {
@@ -72,7 +101,7 @@ router.get('/calendar', async (req: AuthenticatedRequest, res: Response, next: N
     const calendar: { date: string; commitmentMet: boolean; timeSpentMinutes: number; vacationMode: boolean }[] = [];
     for (let i = 0; i < days; i++) {
       const date = new Date(startDate);
-      date.setDate(date.getDate() + i);
+      date.setUTCDate(date.getUTCDate() + i);
 
       const record = records.find(r => {
         const recordDate = new Date(r.date);
@@ -107,12 +136,14 @@ router.post('/log', async (req: AuthenticatedRequest, res: Response, next: NextF
   try {
     const { timeSpentMinutes, questionsAnswered, sessionsCompleted } = req.body;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
+    // Get user preferences to determine timezone and target
     const preferences = await prisma.userPreferences.findUnique({
       where: { userId: req.user!.id },
     });
+
+    // Get today in user's timezone
+    const userTimezone = preferences?.timezone || 'America/New_York';
+    const today = getStartOfDayInTimezone(userTimezone);
 
     const targetMinutes = preferences?.dailyCommitmentMinutes || 15;
 
@@ -162,8 +193,12 @@ router.patch('/settings', async (req: AuthenticatedRequest, res: Response, next:
   try {
     const { busyWeekMode, vacationMode } = req.body;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Get user preferences to determine timezone
+    const preferences = await prisma.userPreferences.findUnique({
+      where: { userId: req.user!.id },
+    });
+    const userTimezone = preferences?.timezone || 'America/New_York';
+    const today = getStartOfDayInTimezone(userTimezone);
 
     const record = await prisma.dailyRecord.upsert({
       where: {
