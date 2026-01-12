@@ -28,6 +28,7 @@ const updatePreferencesSchema = z.object({
   quietHoursEnd: z.string().optional().nullable(),
   onboardingCompleted: z.boolean().optional(),
   onboardingStep: z.number().optional(),
+  maxDailyReviews: z.number().min(1).max(100).optional(),
 });
 
 // GET /api/users/profile
@@ -115,6 +116,23 @@ router.get('/preferences', async (req: AuthenticatedRequest, res: Response, next
 
 // PUT /api/users/preferences
 router.put('/preferences', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const data = updatePreferencesSchema.parse(req.body);
+
+    const preferences = await prisma.userPreferences.upsert({
+      where: { userId: req.user!.id },
+      update: data,
+      create: { userId: req.user!.id, ...data },
+    });
+
+    res.json(preferences);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PATCH /api/users/preferences - partial update
+router.patch('/preferences', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const data = updatePreferencesSchema.parse(req.body);
 

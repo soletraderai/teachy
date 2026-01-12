@@ -44,6 +44,36 @@ router.get('/due-for-review', async (req: AuthenticatedRequest, res: Response, n
 // GET /api/topics/quick-review - Get topics and questions for quick review session
 router.get('/quick-review', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
+    // Get user preferences for max daily reviews
+    const preferences = await prisma.userPreferences.findUnique({
+      where: { userId: req.user!.id },
+    });
+    const maxDailyReviews = preferences?.maxDailyReviews ?? 20;
+
+    // Count how many reviews user has done today
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayReviews = await prisma.topic.count({
+      where: {
+        userId: req.user!.id,
+        lastReviewedAt: { gte: todayStart },
+      },
+    });
+
+    // Calculate remaining reviews for today
+    const remainingReviews = Math.max(0, maxDailyReviews - todayReviews);
+
+    if (remainingReviews === 0) {
+      return res.json({
+        items: [],
+        totalQuestions: 0,
+        estimatedMinutes: 0,
+        maxDailyReviews,
+        todayReviews,
+        limitReached: true,
+      });
+    }
+
     // Get topics due for review with their questions
     const topics = await prisma.topic.findMany({
       where: {
@@ -64,7 +94,7 @@ router.get('/quick-review', async (req: AuthenticatedRequest, res: Response, nex
         },
       },
       orderBy: { nextReviewDate: 'asc' },
-      take: 5, // Limit to 5 topics (5-10 questions total)
+      take: Math.min(5, remainingReviews), // Limit to remaining reviews or 5 topics
     });
 
     // Flatten to get review items (topic + question pairs)
@@ -82,12 +112,15 @@ router.get('/quick-review', async (req: AuthenticatedRequest, res: Response, nex
         videoThumbnail: topic.session.videoThumbnail,
         channelName: topic.session.channelName,
       }))
-    ).slice(0, 10); // Limit to 10 questions max
+    ).slice(0, Math.min(10, remainingReviews)); // Limit to 10 questions max or remaining reviews
 
     res.json({
       items: reviewItems,
       totalQuestions: reviewItems.length,
       estimatedMinutes: Math.min(5, Math.ceil(reviewItems.length * 0.5)), // ~30 seconds per question
+      maxDailyReviews,
+      todayReviews,
+      limitReached: false,
     });
   } catch (error) {
     next(error);

@@ -182,6 +182,7 @@ export default function Settings() {
   const [vacationMode, setVacationMode] = useState(false);
   const [isTogglingMode, setIsTogglingMode] = useState(false);
   const [dailyCommitmentMinutes, setDailyCommitmentMinutes] = useState(30);
+  const [maxDailyReviews, setMaxDailyReviews] = useState(20);
   const [isUpdatingCommitment, setIsUpdatingCommitment] = useState(false);
 
   // Fetch commitment mode status and daily target
@@ -206,6 +207,21 @@ export default function Settings() {
           setVacationMode(data.vacationMode || false);
           // Use baseTargetMinutes which is the original (non-reduced) value
           setDailyCommitmentMinutes(data.baseTargetMinutes || 30);
+        }
+
+        // Also fetch user preferences for maxDailyReviews
+        const prefsResponse = await fetch(`${API_BASE}/users/preferences`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          credentials: 'include',
+        });
+
+        if (prefsResponse.ok) {
+          const prefsData = await prefsResponse.json();
+          if (prefsData.maxDailyReviews) {
+            setMaxDailyReviews(prefsData.maxDailyReviews);
+          }
         }
       } catch (err) {
         console.error('Failed to fetch commitment status:', err);
@@ -241,6 +257,37 @@ export default function Settings() {
       }
     } catch (err) {
       setToast({ message: 'Failed to update daily goal', type: 'error' });
+    } finally {
+      setIsUpdatingCommitment(false);
+    }
+  };
+
+  // Handle max daily reviews change
+  const handleMaxReviewsChange = async (limit: number) => {
+    setIsUpdatingCommitment(true);
+    try {
+      const { accessToken } = useAuthStore.getState();
+      const response = await fetch(`${API_BASE}/users/preferences`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ maxDailyReviews: limit }),
+      });
+
+      if (response.ok) {
+        setMaxDailyReviews(limit);
+        setToast({
+          message: `Max daily reviews set to ${limit}`,
+          type: 'success',
+        });
+      } else {
+        setToast({ message: 'Failed to update max daily reviews', type: 'error' });
+      }
+    } catch (err) {
+      setToast({ message: 'Failed to update max daily reviews', type: 'error' });
     } finally {
       setIsUpdatingCommitment(false);
     }
@@ -1024,6 +1071,31 @@ export default function Settings() {
                   } ${isUpdatingCommitment ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {minutes} min
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Max Daily Reviews Selector */}
+          <div className="mb-6 p-4 bg-surface/50 border-2 border-border rounded">
+            <div className="mb-2">
+              <p className="font-heading font-semibold text-text">Max Daily Reviews</p>
+              <p className="text-sm text-text/60 mb-3">Limit spaced repetition reviews per day</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[5, 10, 15, 20, 30].map((limit) => (
+                <button
+                  key={limit}
+                  type="button"
+                  onClick={() => handleMaxReviewsChange(limit)}
+                  disabled={isUpdatingCommitment}
+                  className={`px-4 py-2 font-heading font-semibold border-2 border-border transition-all ${
+                    maxDailyReviews === limit
+                      ? 'bg-secondary shadow-brutal-sm'
+                      : 'bg-surface hover:bg-surface/80'
+                  } ${isUpdatingCommitment ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {limit} reviews
                 </button>
               ))}
             </div>

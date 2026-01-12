@@ -65,6 +65,7 @@ model UserPreferences {
   quietHoursEnd           String?  @map("quiet_hours_end")
   onboardingCompleted     Boolean  @default(false) @map("onboarding_completed")
   onboardingStep          Int      @default(0) @map("onboarding_step")
+  maxDailyReviews         Int      @default(20) @map("max_daily_reviews")
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 

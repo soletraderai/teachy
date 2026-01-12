@@ -25,6 +25,9 @@ interface QuickReviewData {
   items: ReviewItem[];
   totalQuestions: number;
   estimatedMinutes: number;
+  maxDailyReviews?: number;
+  todayReviews?: number;
+  limitReached?: boolean;
 }
 
 type ReviewPhase = 'question' | 'feedback';
@@ -176,17 +179,37 @@ export default function ReviewSession() {
     );
   }
 
-  // No items state
+  // No items state or daily limit reached
   if (!reviewData || reviewData.items.length === 0) {
+    const limitReached = reviewData?.limitReached;
     return (
       <div className="max-w-2xl mx-auto">
         <Card className="text-center py-12">
           <div className="space-y-4">
-            <svg className="w-16 h-16 mx-auto text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <h1 className="font-heading text-2xl font-bold text-text">All Caught Up!</h1>
-            <p className="text-text/70">No topics are due for review right now.</p>
+            {limitReached ? (
+              <>
+                <svg className="w-16 h-16 mx-auto text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h1 className="font-heading text-2xl font-bold text-text">Daily Review Limit Reached!</h1>
+                <p className="text-text/70">
+                  You've completed {reviewData?.todayReviews} reviews today.
+                  <br />
+                  Your daily limit is set to {reviewData?.maxDailyReviews} reviews.
+                </p>
+                <p className="text-sm text-text/50">
+                  You can adjust your daily limit in Settings.
+                </p>
+              </>
+            ) : (
+              <>
+                <svg className="w-16 h-16 mx-auto text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h1 className="font-heading text-2xl font-bold text-text">All Caught Up!</h1>
+                <p className="text-text/70">No topics are due for review right now.</p>
+              </>
+            )}
             <Button onClick={() => navigate('/')}>Back to Home</Button>
           </div>
         </Card>
