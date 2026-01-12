@@ -8,7 +8,7 @@ import Toast from '../components/ui/Toast';
 import Skeleton, { SettingsSectionSkeleton } from '../components/ui/Skeleton';
 import AnimatedNumber from '../components/ui/AnimatedNumber';
 import { useSettingsStore } from '../stores/settingsStore';
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore, authApi } from '../stores/authStore';
 import type { TutorPersonality } from '../types';
 
 interface LearningModelData {
@@ -170,6 +170,7 @@ export default function Settings() {
   const [showCancelSubscriptionConfirm, setShowCancelSubscriptionConfirm] = useState(false);
   const [cancellingSubscription, setCancellingSubscription] = useState(false);
   const [reactivatingSubscription, setReactivatingSubscription] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<{
     cancelAtPeriodEnd: boolean;
     currentPeriodEnd: string | null;
@@ -505,6 +506,21 @@ export default function Settings() {
     }
   };
 
+  // Handle logout
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await authApi.logout();
+    } catch (err) {
+      console.error('Logout API error:', err);
+      // Continue with client-side logout even if API call fails
+    } finally {
+      const { logout } = useAuthStore.getState();
+      logout();
+      navigate('/login');
+    }
+  };
+
   // Handle delete account
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== 'DELETE') return;
@@ -836,6 +852,21 @@ export default function Settings() {
             <p className="mt-2 text-sm text-text/60">
               Email: {user?.email || 'Not available'}
             </p>
+            {isAuthenticated() && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                loading={loggingOut}
+                disabled={loggingOut}
+                className="mt-4"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Log Out
+              </Button>
+            )}
           </div>
         </div>
       </Card>

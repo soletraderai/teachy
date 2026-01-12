@@ -17,6 +17,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import EmailVerification from './pages/EmailVerification';
 import CheckoutSuccess from './pages/CheckoutSuccess';
+import Onboarding from './pages/Onboarding';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify-email/:token" element={<EmailVerification />} />
+          <Route path="/onboarding" element={<Onboarding />} />
 
           {/* App routes with layout */}
           <Route path="/" element={<Layout />}>

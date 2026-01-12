@@ -6,8 +6,7 @@ import Breadcrumb from './Breadcrumb';
 import PageTransition from './PageTransition';
 import Tooltip from './Tooltip';
 import { useAuthStore } from '../../stores/authStore';
-
-const API_BASE = 'http://localhost:3001/api';
+import { api } from '../../services/api';
 
 interface ApproachingGoal {
   id: string;
@@ -26,24 +25,14 @@ export default function Layout() {
   const [approachingGoals, setApproachingGoals] = useState<ApproachingGoal[]>([]);
   const [showGoalDeadlineBanner, setShowGoalDeadlineBanner] = useState(true);
 
-  // Fetch topics due for review
+  // Fetch topics due for review (with automatic token refresh)
   useEffect(() => {
     const fetchDueTopics = async () => {
       if (!isAuthenticated()) return;
 
       try {
-        const { accessToken } = useAuthStore.getState();
-        const response = await fetch(`${API_BASE}/topics/due-for-review`, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          credentials: 'include',
-        });
-
-        if (response.ok) {
-          const topics = await response.json();
-          setDueTopicsCount(topics.length);
-        }
+        const topics = await api.get<Array<{ id: string }>>('/topics/due-for-review');
+        setDueTopicsCount(topics.length);
       } catch (err) {
         console.error('Failed to fetch due topics:', err);
       }
@@ -52,24 +41,14 @@ export default function Layout() {
     fetchDueTopics();
   }, [isAuthenticated, location.pathname]);
 
-  // Fetch goals with approaching deadlines
+  // Fetch goals with approaching deadlines (with automatic token refresh)
   useEffect(() => {
     const fetchApproachingGoals = async () => {
       if (!isAuthenticated() || user?.tier !== 'PRO') return;
 
       try {
-        const { accessToken } = useAuthStore.getState();
-        const response = await fetch(`${API_BASE}/goals/approaching-deadlines?days=7`, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          credentials: 'include',
-        });
-
-        if (response.ok) {
-          const goals = await response.json();
-          setApproachingGoals(goals);
-        }
+        const goals = await api.get<ApproachingGoal[]>('/goals/approaching-deadlines?days=7');
+        setApproachingGoals(goals);
       } catch (err) {
         console.error('Failed to fetch approaching goals:', err);
       }

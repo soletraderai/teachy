@@ -130,6 +130,38 @@ router.put('/preferences', async (req: AuthenticatedRequest, res: Response, next
   }
 });
 
+// POST /api/users/complete-onboarding
+router.post('/complete-onboarding', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { tutorPersonality } = req.body;
+
+    // Map frontend tutor personality to valid enum value
+    const validPersonalities = ['PROFESSOR', 'COACH', 'DIRECT', 'CREATIVE'];
+    const personality = validPersonalities.includes(tutorPersonality) ? tutorPersonality : 'COACH';
+
+    // Update preferences with onboarding data
+    const preferences = await prisma.userPreferences.upsert({
+      where: { userId: req.user!.id },
+      update: {
+        tutorPersonality: personality,
+        onboardingCompleted: true,
+      },
+      create: {
+        userId: req.user!.id,
+        tutorPersonality: personality,
+        onboardingCompleted: true,
+      },
+    });
+
+    res.json({
+      message: 'Onboarding completed successfully',
+      preferences,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // POST /api/users/migrate-local-data
 router.post('/migrate-local-data', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
