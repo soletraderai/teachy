@@ -3,12 +3,12 @@ import Button from './Button';
 import type { Topic, ChatMessage } from '../../types';
 import { digDeeper, generateAlternateQuestion } from '../../services/gemini';
 import { createPortal } from 'react-dom';
+import { useSettingsStore } from '../../stores/settingsStore';
 
 interface DigDeeperModalProps {
   isOpen: boolean;
   onClose: () => void;
   topic: Topic;
-  apiKey: string;
   conversation: ChatMessage[];
   onConversationUpdate: (messages: ChatMessage[]) => void;
   onGenerateQuestion: (question: string) => void;
@@ -18,7 +18,6 @@ export default function DigDeeperModal({
   isOpen,
   onClose,
   topic,
-  apiKey,
   conversation,
   onConversationUpdate,
   onGenerateQuestion,
@@ -105,7 +104,7 @@ export default function DigDeeperModal({
     setError(null);
 
     try {
-      const response = await digDeeper(apiKey, topic, conversation, input.trim());
+      const response = await digDeeper(topic, conversation, input.trim());
 
       const assistantMessage: ChatMessage = {
         role: 'assistant',
@@ -117,10 +116,21 @@ export default function DigDeeperModal({
     } catch (err) {
       console.error('Dig deeper error:', err);
       setError(err instanceof Error ? err.message : 'Failed to get response. Please try again.');
-      // Provide fallback response when API fails
+      // Provide fallback response when API fails - using personality
+      const { settings } = useSettingsStore.getState();
+      const personality = settings.tutorPersonality || 'COACH';
+
+      // Personality-aware fallback responses
+      const fallbackResponses: Record<string, string> = {
+        PROFESSOR: `While I'm experiencing connectivity issues, I recommend reviewing the scholarly materials related to "${topic.title}". Consider the theoretical foundations we've discussed.`,
+        COACH: `Hey, having a small technical hiccup! While I reconnect, try reviewing the topic summary for "${topic.title}". You've got this - feel free to ask again!`,
+        DIRECT: `Connection issue. Review topic summary for "${topic.title}". Try again shortly.`,
+        CREATIVE: `Think of this like a brief intermission in our learning journey about "${topic.title}"! While I get back on track, explore the topic summary. We'll continue shortly!`,
+      };
+
       const fallbackMessage: ChatMessage = {
         role: 'assistant',
-        content: `I understand you're curious about "${topic.title}". While I'm having trouble connecting right now, here are some suggestions: Try reviewing the topic summary, exploring related resources, or formulating your question differently. Feel free to ask again!`,
+        content: fallbackResponses[personality] || fallbackResponses.COACH,
         timestamp: Date.now(),
       };
       onConversationUpdate([...updatedConversation, fallbackMessage]);
@@ -139,7 +149,6 @@ export default function DigDeeperModal({
     try {
       const currentQuestion = topic.questions[0];
       const newQuestion = await generateAlternateQuestion(
-        apiKey,
         topic,
         currentQuestion,
         'harder'

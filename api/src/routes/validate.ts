@@ -17,11 +17,11 @@ router.post('/settings', async (req: Request, res: Response, next: NextFunction)
       errors.userName = 'Name must be less than 50 characters';
     }
 
-    // Validate geminiApiKey
-    if (!geminiApiKey || typeof geminiApiKey !== 'string') {
-      errors.geminiApiKey = 'API key is required';
-    } else if (geminiApiKey.trim().length < 10) {
-      errors.geminiApiKey = 'API key appears to be invalid';
+    // Validate geminiApiKey (optional - only validate if provided)
+    if (geminiApiKey && typeof geminiApiKey === 'string' && geminiApiKey.trim().length > 0) {
+      if (geminiApiKey.trim().length < 10) {
+        errors.geminiApiKey = 'API key appears to be invalid';
+      }
     }
 
     // Validate language (accepts both codes and names)
