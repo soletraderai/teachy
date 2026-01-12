@@ -7,6 +7,7 @@ import Card from '../components/ui/Card';
 import Toast from '../components/ui/Toast';
 import Skeleton, { SettingsSectionSkeleton } from '../components/ui/Skeleton';
 import AnimatedNumber from '../components/ui/AnimatedNumber';
+import CommitmentCalendar from '../components/ui/CommitmentCalendar';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useAuthStore, authApi } from '../stores/authStore';
 import type { TutorPersonality } from '../types';
@@ -870,6 +871,14 @@ export default function Settings() {
           </div>
         </div>
       </Card>
+
+      {/* Daily Commitment - Learning Activity Calendar */}
+      {isAuthenticated() && (
+        <Card className="mb-6">
+          <h2 className="font-heading text-xl font-bold text-text mb-4">Daily Commitment</h2>
+          <CommitmentCalendar />
+        </Card>
+      )}
 
       <Card>
         <form onSubmit={handleSubmit} className="space-y-6">
