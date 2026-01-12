@@ -30,14 +30,25 @@ interface DayActivity {
   sessions: number;
 }
 
+interface LearningInsights {
+  bestTime: string;
+  avgSessionDuration: number;
+  preferredDifficulty: string;
+  learningStreak: number;
+  patterns: { type: string; description: string }[];
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { accessToken, isAuthenticated } = useAuthStore();
+  const { accessToken, isAuthenticated, user } = useAuthStore();
   const { library } = useSessionStore();
   const [commitment, setCommitment] = useState<CommitmentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [chartView, setChartView] = useState<ChartView>('week');
+  const [insights, setInsights] = useState<LearningInsights | null>(null);
+
+  const isPro = user?.tier === 'PRO';
 
   // Get recent sessions (last 3)
   const recentSessions = library.sessions.slice(0, 3);
@@ -117,6 +128,41 @@ export default function Dashboard() {
 
     fetchCommitment();
   }, [accessToken, isAuthenticated]);
+
+  // Fetch learning insights for Pro users
+  useEffect(() => {
+    const fetchInsights = async () => {
+      if (!isPro || !isAuthenticated()) return;
+
+      try {
+        const response = await fetch(`${API_BASE}/learning-model`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Transform API data to insights format
+          setInsights({
+            bestTime: data.bestTimeOfDay || 'Morning',
+            avgSessionDuration: data.avgSessionDuration || 15,
+            preferredDifficulty: data.preferredDifficulty || 'Medium',
+            learningStreak: data.learningStreak || 0,
+            patterns: data.patterns?.slice(0, 3).map((p: any) => ({
+              type: p.signalType || 'general',
+              description: p.insight || 'Keep learning consistently',
+            })) || [],
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch insights:', err);
+      }
+    };
+
+    fetchInsights();
+  }, [isPro, accessToken, isAuthenticated]);
 
   const formatTime = (minutes: number) => {
     if (minutes < 60) {
@@ -316,6 +362,105 @@ export default function Dashboard() {
           </div>
         </Card>
       </div>
+
+      {/* Pro Insights Section */}
+      {isPro ? (
+        <Card>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <h2 className="font-heading text-xl font-bold text-text">
+                Learning Insights
+              </h2>
+              <span className="px-2 py-0.5 text-xs font-bold bg-secondary border-2 border-border">
+                PRO
+              </span>
+            </div>
+
+            {insights ? (
+              <div className="space-y-4">
+                {/* Key Metrics */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="p-3 bg-surface border-2 border-border">
+                    <p className="text-xs text-text/60 mb-1">Best Time</p>
+                    <p className="font-heading font-bold text-text">{insights.bestTime}</p>
+                  </div>
+                  <div className="p-3 bg-surface border-2 border-border">
+                    <p className="text-xs text-text/60 mb-1">Avg Duration</p>
+                    <p className="font-heading font-bold text-text">{insights.avgSessionDuration} min</p>
+                  </div>
+                  <div className="p-3 bg-surface border-2 border-border">
+                    <p className="text-xs text-text/60 mb-1">Preferred Difficulty</p>
+                    <p className="font-heading font-bold text-text">{insights.preferredDifficulty}</p>
+                  </div>
+                  <div className="p-3 bg-surface border-2 border-border">
+                    <p className="text-xs text-text/60 mb-1">Learning Streak</p>
+                    <p className="font-heading font-bold text-text">{insights.learningStreak} days</p>
+                  </div>
+                </div>
+
+                {/* Learning Patterns */}
+                {insights.patterns.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="font-heading font-semibold text-text">Learning Patterns</h3>
+                    <div className="space-y-2">
+                      {insights.patterns.map((pattern, index) => (
+                        <div
+                          key={index}
+                          className="flex items-start gap-2 p-2 bg-primary/10 border border-border"
+                        >
+                          <svg className="w-4 h-4 mt-0.5 text-secondary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                          <span className="text-sm text-text">{pattern.description}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-text/60">Complete more sessions to unlock personalized insights</p>
+              </div>
+            )}
+          </div>
+        </Card>
+      ) : (
+        <Card className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-surface/90 z-10" />
+          <div className="space-y-4 blur-sm">
+            <div className="flex items-center gap-2">
+              <h2 className="font-heading text-xl font-bold text-text">
+                Learning Insights
+              </h2>
+              <span className="px-2 py-0.5 text-xs font-bold bg-secondary border-2 border-border">
+                PRO
+              </span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="p-3 bg-surface border-2 border-border">
+                <p className="text-xs text-text/60 mb-1">Best Time</p>
+                <p className="font-heading font-bold text-text">Morning</p>
+              </div>
+              <div className="p-3 bg-surface border-2 border-border">
+                <p className="text-xs text-text/60 mb-1">Avg Duration</p>
+                <p className="font-heading font-bold text-text">20 min</p>
+              </div>
+            </div>
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center z-20">
+            <div className="text-center">
+              <p className="font-heading font-bold text-text mb-2">Unlock Learning Insights</p>
+              <button
+                onClick={() => navigate('/pricing')}
+                className="px-4 py-2 font-heading font-bold bg-secondary border-3 border-border shadow-brutal hover:shadow-brutal-hover transition-all"
+              >
+                Upgrade to Pro
+              </button>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Activity Chart */}
       <Card>
