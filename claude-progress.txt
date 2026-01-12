@@ -3,10 +3,10 @@
 ## Session 19 - January 13, 2026
 
 ### Summary
-Implemented free tier limits and onboarding enhancements. Added session limits (3/month) and question limits (10/session) for free users. Extended onboarding flow with language variant and commitment settings steps. Progress increased from 314/415 to 319/415 (76.9%).
+Implemented free tier limits, onboarding enhancements, and dashboard features. Added session/question limits for free users, extended onboarding with language variant and commitment steps, added dashboard metrics, charts, topic performance, and Pro-only insights. Progress increased from 314/415 to 325/415 (78.3%).
 
 ### Current Progress
-- **Passing**: 319/415 features (76.9%)
+- **Passing**: 325/415 features (78.3%)
 - **Phase**: 2
 
 ### Session 19 Implemented Features
@@ -47,14 +47,60 @@ Implemented free tier limits and onboarding enhancements. Added session limits (
 - src/pages/Onboarding.tsx - Added language-variant and commitment steps
 - Multiple frontend files - Updated API_BASE from port 3001 to 3002
 
-### Commits This Session
-- `a738988` - feat: Add free tier limits and onboarding enhancements
+#### 6. Onboarding Resume on Return - Feature #447
+- localStorage persistence for onboarding progress
+- Saves step, selections, and preferences
+- Resumes at correct step when user returns
+- Clears progress on completion or skip
+
+#### 7. Dashboard Summary Metrics - Feature #452
+- Total Sessions count
+- Time Invested (calculated from questions answered)
+- Topics Covered count
+- Accuracy percentage
+
+#### 8. Dashboard Weekly Chart - Feature #453
+- Activity bar chart with 7 days
+- Week/Month toggle buttons
+- Shows minutes and session counts per day
+- Total and active days summary
+
+#### 9. Dashboard Topic Performance - Feature #454
+- Top 5 topics by engagement
+- Progress bars showing relative performance
+- "Strength" badges for top performers (≥80%)
+- Question count for each topic
+
+#### 10. Dashboard Insights (Pro) - Feature #455
+- Pro users see full Learning Insights section
+- Best Time, Avg Duration, Preferred Difficulty, Learning Streak
+- Learning Patterns with recommendations
+- Free users see blurred version with upgrade prompt
+
+#### 11. Dashboard Chart Mobile Friendly - Feature #459
+- Charts visible and readable at 375px width
+- Touch interactions work
+- No horizontal overflow
 
 ### Skipped Features
 - Feature #338 (Google OAuth) - Returns NOT_IMPLEMENTED, requires Google credentials
+- Feature #449 (Framer Motion transitions) - Library not installed
+
+### Files Modified
+- api/src/routes/sessions.ts - Added free tier session limit check
+- api/src/routes/questions.ts - Added free tier questions limit check
+- src/pages/Onboarding.tsx - Added language-variant, commitment steps, localStorage persistence
+- src/pages/Dashboard.tsx - Added metrics, charts, topic performance, Pro insights
+- Multiple frontend files - Updated API_BASE from port 3001 to 3002
+
+### Commits This Session
+- `a738988` - feat: Add free tier limits and onboarding enhancements
+- `fd5d252` - Update progress notes - Session 19
+- `0cf7c96` - feat: Add onboarding resume, dashboard metrics and charts
+- `01cfde2` - feat: Add Pro-only Learning Insights section to Dashboard
 
 ### Notes for Next Session
-- Progress at 76.9% (319/415)
+- Progress at 78.3% (325/415)
 - Continue with remaining Phase 2 features
 - API server running on port 3002
 - Frontend running on port 5173
