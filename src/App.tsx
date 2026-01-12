@@ -18,6 +18,7 @@ import ResetPassword from './pages/ResetPassword';
 import EmailVerification from './pages/EmailVerification';
 import CheckoutSuccess from './pages/CheckoutSuccess';
 import Onboarding from './pages/Onboarding';
+import Dashboard from './pages/Dashboard';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
           {/* App routes with layout */}
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
+            <Route path="dashboard" element={<Dashboard />} />
             <Route path="settings" element={<Settings />} />
             <Route path="library" element={<Library />} />
             <Route path="feed" element={<Feed />} />

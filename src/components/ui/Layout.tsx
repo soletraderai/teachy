@@ -59,6 +59,7 @@ export default function Layout() {
 
   const navLinks = [
     { to: '/', label: 'Home' },
+    { to: '/dashboard', label: 'Dashboard' },
     { to: '/feed', label: 'Your Feed' },
     { to: '/library', label: 'Library' },
     { to: '/goals', label: 'Goals' },

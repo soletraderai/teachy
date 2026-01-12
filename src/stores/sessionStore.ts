@@ -151,8 +151,37 @@ const sessionApi = {
           });
         }
       }
+
+      // Log commitment progress
+      await this.logCommitment(session);
     } catch (error) {
       console.warn('Cloud sync complete error:', error);
+    }
+  },
+
+  // Log learning time and questions to commitment tracker
+  async logCommitment(session: Session): Promise<void> {
+    const headers = getAuthHeaders();
+    if (!headers) return;
+
+    try {
+      // Calculate time spent (estimate based on questions answered)
+      // Assume average of 2 minutes per question answered
+      const questionsAnswered = session.score.questionsAnswered || 0;
+      const timeSpentMinutes = Math.max(1, questionsAnswered * 2);
+
+      await fetch(`${API_BASE}/commitment/log`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          timeSpentMinutes,
+          questionsAnswered,
+          sessionsCompleted: 1,
+        }),
+      });
+    } catch (error) {
+      console.warn('Failed to log commitment:', error);
     }
   },
 };
