@@ -1,11 +1,123 @@
 # Teachy Phase 2 - Progress Report
 
+## Session 17 - January 12, 2026
+
+### Summary
+Implemented Quick Review Session feature for spaced repetition. Users can now click the review notification banner to start a quick review session with 5-10 questions from topics due for review. Progress increased from 310/415 to 311/415 (74.9%).
+
+### Current Progress
+- **Passing**: 311/415 features (74.9%)
+- **Phase**: 2
+
+### Session 17 Implemented Features
+
+#### 1. Quick Review Session - Feature #521
+- Created `/review` route with ReviewSession page component
+- Added `GET /api/topics/quick-review` endpoint
+  - Returns topics due for review with their questions
+  - Limits to 5 topics with 2 questions each (max 10 questions)
+  - Includes video context (title, thumbnail, channel)
+- Added `POST /api/questions` endpoint for creating questions
+- Updated review notification banner to link to `/review` instead of `/library`
+- Review session features:
+  - "QUICK REVIEW" badge with timer
+  - Progress bar showing questions completed
+  - Topic context card with mastery level badge
+  - Question and answer interface
+  - Feedback phase with thumbs up/lightbulb icons
+  - Completion screen with stats (questions, accuracy, time)
+- Designed for quick 5-minute review sessions
+- Full neobrutalism design consistency
+
+### Files Created
+- `src/pages/ReviewSession.tsx` - Quick review session page component
+
+### Files Modified
+- `src/App.tsx` - Added `/review` route
+- `src/components/ui/Layout.tsx` - Updated review banner link to `/review`
+- `api/src/routes/topics.ts` - Added `GET /api/topics/quick-review` endpoint
+- `api/src/routes/questions.ts` - Added `POST /api/questions` endpoint
+
+### Commits This Session
+- `b2b9984` - feat: Add quick review session for spaced repetition
+
+### Notes for Next Session
+- Progress at 74.9% (311/415)
+- Continue with remaining Phase 2 features
+- Many features require complex infrastructure (timed sessions, email, code editor)
+
+---
+
+## Session 16 - January 12, 2026
+
+### Summary
+Continued Phase 2 implementation. Added busy week mode, vacation mode, daily commitment level selector, timezone-aware commitment tracking, and start session from feed functionality. Progress increased from 305/415 to 309/415 (74.5%).
+
+### Current Progress
+- **Passing**: 309/415 features (74.5%)
+- **Phase**: 2
+
+### Session 16 Implemented Features
+
+#### 1. Busy Week Mode - Feature #486
+- Toggle in Settings to enable busy week mode
+- Reduces daily target by 50% when enabled
+- Dashboard shows "Busy Week" badge when active
+- Toast notifications for enable/disable
+
+#### 2. Vacation Mode - Feature #487
+- Toggle in Settings to enable vacation mode
+- Pauses commitment tracking
+- Dashboard shows "Vacation Mode" badge
+- Days during vacation not counted against consistency
+- Toast notifications for enable/disable
+
+#### 3. Commitment Instant Adjustment - Feature #488
+- Daily commitment level selector buttons (15/30/45/60/90 min)
+- Instant update without confirmation dialog
+- Dashboard immediately reflects new target
+- No negative messaging about changing goals
+
+#### 4. Commitment Timezone Aware - Feature #489
+- Added `getStartOfDayInTimezone()` helper function
+- Uses `Intl.DateTimeFormat` for timezone conversion
+- All 4 commitment endpoints use user's timezone
+- Response includes timezone field
+- Day resets at midnight in user's local time
+
+#### 5. Start Session from Feed - Feature #510
+- Feed page shows videos from followed channels
+- "Videos from Your Channels" section with video cards
+- Each video has "Start Learning" button
+- Clicking navigates to Home with video URL pre-filled
+- Auto-starts session without manual URL input
+
+### Files Modified
+- `src/pages/Settings.tsx` - Added daily commitment level selector UI
+- `api/src/routes/commitment.ts` - Added timezone-aware date handling
+- `api/src/routes/channels.ts` - Updated feed to return videos from followed channels
+- `src/pages/Feed.tsx` - Added video cards section with start learning buttons
+- `src/pages/Home.tsx` - Added auto-start support from navigation state
+
+### Commits This Session
+- `0966919` - feat: Add busy week mode and vacation mode toggles
+- `3d9eeaa` - feat: Add daily commitment level selector
+- `0acbbb3` - feat: Add timezone-aware day reset for commitment tracking
+- `95fcf7c` - feat: Add start session from feed video functionality
+
+### Notes for Next Session
+- Progress at 74.5% (309/415)
+- Next feature: #517 - Difficulty calibration
+- Continue with remaining Phase 2 features
+
+---
+
 ## Session 15 - January 12, 2026
 
 ### Summary
 Continued Phase 2 implementation. Added collapsible Sources panel to ActiveSession page, verified commitment calendar week/month views, source quality indicators, and goal auto-tracking. Progress increased from 293/415 to 301/415 (72.5%).
 
-### Current Progress
+### Previous Progress
 - **Passing**: 301/415 features (72.5%)
 - **Phase**: 2
 
