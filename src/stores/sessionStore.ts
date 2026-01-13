@@ -79,6 +79,26 @@ const sessionApi = {
 
       if (!response.ok) {
         console.warn('Failed to sync session to cloud:', await response.text());
+        return;
+      }
+
+      // Get the created session's database ID
+      const createdSession = await response.json();
+
+      // Save knowledge base sources if available
+      if (session.knowledgeBase?.sources?.length > 0 && createdSession.id) {
+        try {
+          await fetch(`${API_BASE}/sessions/${createdSession.id}/sources`, {
+            method: 'POST',
+            headers,
+            credentials: 'include',
+            body: JSON.stringify({
+              sources: session.knowledgeBase.sources,
+            }),
+          });
+        } catch (sourceError) {
+          console.warn('Failed to save knowledge base sources:', sourceError);
+        }
       }
     } catch (error) {
       console.warn('Cloud sync error:', error);

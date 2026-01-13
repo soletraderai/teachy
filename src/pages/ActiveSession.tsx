@@ -235,7 +235,8 @@ export default function ActiveSession() {
           currentTopic,
           currentQuestion,
           answer,
-          session.difficulty || 'standard'
+          session.difficulty || 'standard',
+          session.knowledgeBase?.sources
         );
       } catch (apiError) {
         console.error('AI API error:', apiError);

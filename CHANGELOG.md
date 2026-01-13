@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Supabase Auth integration with Google OAuth support
 - OAuth callback handler (`/auth/callback` route)
 - Supabase client libraries (frontend and backend)
+- Knowledge base persistence to database (`POST /api/sessions/:id/sources`)
+- AI feedback now references knowledge base sources for richer responses
 
 ### Changed
 - Migrated authentication from JWT to Supabase Auth
@@ -22,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactored Goals.tsx to use TanStack Query hooks and mutations (removed ~150 lines)
 - Updated auth middleware to support both legacy JWT and Supabase tokens
 - Extended query keys in `queryClient.ts` for commitment, learningInsights, and goals
+- Enhanced `evaluateAnswer` API to accept knowledge base sources
+- Session save flow now automatically persists knowledge base to SessionSource table
 
 ### Fixed
 - All 12 pre-existing TypeScript errors resolved

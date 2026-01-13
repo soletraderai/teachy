@@ -85,7 +85,7 @@ router.post('/evaluate-answer', async (req: AuthenticatedRequest, res: Response,
       throw new AppError(429, 'AI rate limit exceeded', 'RATE_LIMITED');
     }
 
-    const { question, userAnswer, expectedAnswer, personality = 'COACH' } = req.body;
+    const { question, userAnswer, expectedAnswer, personality = 'COACH', sources = [] } = req.body;
 
     const personalityPrompts = {
       PROFESSOR: 'Respond in a formal, academic style with thorough explanations.',
@@ -96,20 +96,27 @@ router.post('/evaluate-answer', async (req: AuthenticatedRequest, res: Response,
 
     const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
+    // Build sources section if available
+    const sourcesSection = sources.length > 0
+      ? `\nRelevant learning resources to reference in feedback:\n${sources.map((s: { title: string; url: string; type: string }) =>
+          `- ${s.title} (${s.type}): ${s.url}`
+        ).join('\n')}\n\nWhen providing suggestions, reference these sources where appropriate.`
+      : '';
+
     const prompt = `${personalityPrompts[personality as keyof typeof personalityPrompts] || personalityPrompts.COACH}
 
 Evaluate this answer and provide feedback:
 
 Question: ${question}
 User's Answer: ${userAnswer}
-Expected concepts to cover: ${expectedAnswer}
+Expected concepts to cover: ${expectedAnswer}${sourcesSection}
 
 Return JSON:
 {
   "isCorrect": true | false,
   "feedback": "Your feedback here",
   "keyPoints": ["Point they got right", "Point they missed"],
-  "suggestion": "What to focus on next"
+  "suggestion": "What to focus on next"${sources.length > 0 ? ',\n  "recommendedSources": ["Title of relevant source to explore"]' : ''}
 }`;
 
     const result = await model.generateContent(prompt);

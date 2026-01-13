@@ -192,6 +192,65 @@ router.get('/:id/sources', async (req: AuthenticatedRequest, res: Response, next
   }
 });
 
+// POST /api/sessions/:id/sources - Create knowledge base sources for a session
+router.post('/:id/sources', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id as string;
+    const { sources } = req.body;
+
+    // Verify session belongs to user
+    const session = await prisma.session.findFirst({
+      where: { id, userId: req.user!.id },
+    });
+
+    if (!session) {
+      throw new AppError(404, 'Session not found', 'SESSION_NOT_FOUND');
+    }
+
+    if (!sources || !Array.isArray(sources)) {
+      throw new AppError(400, 'Sources array is required', 'INVALID_INPUT');
+    }
+
+    // Map frontend source types to database enum
+    const mapSourceType = (type: string): 'TRANSCRIPT' | 'DOCUMENTATION' | 'REPOSITORY' | 'ARTICLE' | 'ACADEMIC' => {
+      switch (type) {
+        case 'github':
+          return 'REPOSITORY';
+        case 'documentation':
+          return 'DOCUMENTATION';
+        case 'article':
+          return 'ARTICLE';
+        default:
+          return 'ARTICLE';
+      }
+    };
+
+    // Delete existing sources for this session (in case of re-generation)
+    await prisma.sessionSource.deleteMany({
+      where: { sessionId: id },
+    });
+
+    // Create new sources
+    const createdSources = await Promise.all(
+      sources.map((source: { url: string; title: string; snippet?: string; type: string }) =>
+        prisma.sessionSource.create({
+          data: {
+            sessionId: id,
+            url: source.url,
+            title: source.title,
+            description: source.snippet || null,
+            sourceType: mapSourceType(source.type),
+          },
+        })
+      )
+    );
+
+    res.status(201).json(createdSources);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // POST /api/sessions/:id/complete
 router.post('/:id/complete', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {

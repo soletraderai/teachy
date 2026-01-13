@@ -704,7 +704,8 @@ export async function evaluateAnswer(
   topic: Topic,
   question: Question,
   userAnswer: string,
-  difficulty: 'standard' | 'easier' | 'harder' = 'standard'
+  difficulty: 'standard' | 'easier' | 'harder' = 'standard',
+  sources?: Array<{ url: string; title: string; type: string }>
 ): Promise<string> {
   // Get current personality from settings
   const personality = getCurrentPersonality();
@@ -716,6 +717,11 @@ export async function evaluateAnswer(
     standard: `Evaluate the answer at a standard difficulty level. Balance encouragement with constructive feedback. Acknowledge correct understanding while pointing out areas for improvement.`,
     harder: `The student is working at a harder difficulty level. Be more rigorous in your evaluation. Expect deeper understanding and more comprehensive answers. Challenge them to think more critically while still being encouraging.`,
   };
+
+  // Build sources section if available
+  const sourcesSection = sources && sources.length > 0
+    ? `\n\nRelevant learning resources for deeper study:\n${sources.map(s => `- ${s.title} (${s.type}): ${s.url}`).join('\n')}\n\nIf helpful, you may reference these resources in your feedback.`
+    : '';
 
   const prompt = `${personalityInstructions}
 
@@ -729,7 +735,7 @@ Question: ${question.text}
 Student's Answer: ${userAnswer}
 
 Difficulty Level: ${difficulty.toUpperCase()}
-${difficultyInstructions[difficulty]}
+${difficultyInstructions[difficulty]}${sourcesSection}
 
 Please evaluate the answer and provide constructive feedback in your personality style:
 1. Acknowledge what the student got right
