@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import ProgressBar from '../components/ui/ProgressBar';
 import StaggeredList, { StaggeredItem } from '../components/ui/StaggeredList';
+import LearningPathCard, { type LearningPathData } from '../components/ui/LearningPathCard';
 import { useAuthStore } from '../stores/authStore';
 import { useSessionStore } from '../stores/sessionStore';
 import { useCommitment, useLearningInsights, useDueTopics, useDocumentTitle } from '../hooks';
@@ -457,6 +458,113 @@ export default function Dashboard() {
           </div>
         </Card>
       )}
+
+      {/* Learning Paths Section */}
+      {library.sessions.length > 0 && (() => {
+        // Generate learning paths from session data
+        // Group sessions by topic category to create learning paths
+        const topicCategories: Record<string, {
+          id: string;
+          title: string;
+          sessions: typeof library.sessions;
+          totalTopics: number;
+          completedTopics: number;
+          category: string;
+        }> = {};
+
+        library.sessions.forEach((session) => {
+          session.topics.forEach((topic) => {
+            // Use first word of topic as category
+            const categoryKey = topic.title.split(' ')[0].toLowerCase();
+            const categoryName = topic.title.split(' ')[0];
+
+            if (!topicCategories[categoryKey]) {
+              topicCategories[categoryKey] = {
+                id: categoryKey,
+                title: `${categoryName} Learning Path`,
+                sessions: [],
+                totalTopics: 0,
+                completedTopics: 0,
+                category: categoryName,
+              };
+            }
+            topicCategories[categoryKey].sessions.push(session);
+            topicCategories[categoryKey].totalTopics += 1;
+            if (topic.completed) {
+              topicCategories[categoryKey].completedTopics += 1;
+            }
+          });
+        });
+
+        // Convert to learning path data and filter to meaningful ones
+        const learningPaths: LearningPathData[] = Object.values(topicCategories)
+          .filter((cat) => cat.totalTopics >= 2) // At least 2 topics
+          .sort((a, b) => {
+            // Sort by recent activity and progress
+            const aProgress = a.completedTopics / a.totalTopics;
+            const bProgress = b.completedTopics / b.totalTopics;
+            // Prioritize in-progress paths (not 0% and not 100%)
+            if (aProgress > 0 && aProgress < 1 && (bProgress === 0 || bProgress === 1)) return -1;
+            if (bProgress > 0 && bProgress < 1 && (aProgress === 0 || aProgress === 1)) return 1;
+            return b.totalTopics - a.totalTopics;
+          })
+          .slice(0, 4)
+          .map((cat) => {
+            const progress = cat.completedTopics / cat.totalTopics;
+            let status: 'active' | 'completed' | 'paused' = 'active';
+            if (progress === 1) status = 'completed';
+            else if (progress === 0) status = 'paused';
+
+            return {
+              id: cat.id,
+              title: cat.title,
+              description: `${cat.sessions.length} video${cat.sessions.length !== 1 ? 's' : ''} covering ${cat.category.toLowerCase()} topics`,
+              totalItems: cat.totalTopics,
+              completedItems: cat.completedTopics,
+              estimatedTime: `${Math.ceil(cat.totalTopics * 5)} min`,
+              status,
+              category: cat.category,
+            };
+          });
+
+        if (learningPaths.length === 0) return null;
+
+        return (
+          <Card>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h2 id="learning-paths-heading" className="font-heading text-xl font-bold text-text">
+                    Learning Paths
+                  </h2>
+                  <span className="material-icons text-primary" aria-hidden="true">
+                    route
+                  </span>
+                </div>
+                <button
+                  onClick={() => navigate('/goals')}
+                  className="text-secondary underline hover:no-underline font-heading text-sm"
+                >
+                  Manage Paths
+                </button>
+              </div>
+              <p className="text-sm text-text/70">
+                Your personalized learning journeys based on topics you've studied
+              </p>
+              <div className="grid gap-4 md:grid-cols-2" role="list" aria-labelledby="learning-paths-heading">
+                {learningPaths.map((path) => (
+                  <div key={path.id} role="listitem">
+                    <LearningPathCard
+                      learningPath={path}
+                      onClick={() => navigate('/goals')}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+        );
+      })()}
 
       {/* Knowledge Gaps Section (Pro Only) */}
       {isPro && library.sessions.length > 0 ? (

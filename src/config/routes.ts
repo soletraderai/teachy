@@ -35,6 +35,8 @@ export const ROUTES = {
     goals: '/goals',
     review: '/review',
     knowledgeMap: '/knowledge-map',
+    learningPaths: '/learning-paths',
+    learningPathDetail: '/learning-paths/:pathId',
     // Timed sessions
     timedSessions: '/timed-sessions',
     timedSessionHistory: '/timed-sessions/history',

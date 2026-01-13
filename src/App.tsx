@@ -28,6 +28,8 @@ import TimedSessions from './pages/TimedSessions';
 import TimedSessionActive from './pages/TimedSessionActive';
 import TimedSessionResults from './pages/TimedSessionResults';
 import TimedSessionHistory from './pages/TimedSessionHistory';
+import LearningPaths from './pages/LearningPaths';
+import LearningPathDetail from './pages/LearningPathDetail';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import AuthCallback from './pages/AuthCallback';
@@ -66,6 +68,8 @@ function App() {
               <Route path="goals" element={<Goals />} />
               <Route path="review" element={<ReviewSession />} />
               <Route path="knowledge-map" element={<KnowledgeMap />} />
+              <Route path="learning-paths" element={<LearningPaths />} />
+              <Route path="learning-paths/:pathId" element={<LearningPathDetail />} />
               <Route path="timed-sessions" element={<TimedSessions />} />
               <Route path="timed-sessions/history" element={<TimedSessionHistory />} />
               <Route path="timed-sessions/:sessionId/active" element={<TimedSessionActive />} />
