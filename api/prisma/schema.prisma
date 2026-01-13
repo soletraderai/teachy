@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ============================================
@@ -26,6 +27,7 @@ model User {
   passwordResetToken      String?   @map("password_reset_token")
   passwordResetExpires    DateTime? @map("password_reset_expires")
   googleId                String?   @unique @map("google_id")
+  supabaseId              String?   @unique @map("supabase_id")  // Supabase Auth user ID
   createdAt               DateTime  @default(now()) @map("created_at")
   updatedAt               DateTime  @updatedAt @map("updated_at")
   lastActiveAt            DateTime  @default(now()) @map("last_active_at")

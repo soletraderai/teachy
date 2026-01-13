@@ -24,6 +24,7 @@ import ReviewSession from './pages/ReviewSession';
 import KnowledgeMap from './pages/KnowledgeMap';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
+import AuthCallback from './pages/AuthCallback';
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
           <Route path="/verify-email/:token" element={<EmailVerification />} />
           <Route path="/unsubscribe" element={<Unsubscribe />} />
           <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
 
           {/* App routes with layout */}
           <Route path="/" element={<Layout />}>

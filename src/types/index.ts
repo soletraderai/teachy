@@ -4,12 +4,20 @@ export type TutorPersonality = 'PROFESSOR' | 'COACH' | 'DIRECT' | 'CREATIVE';
 // Learning style type
 export type LearningStyle = 'visual' | 'reading' | 'auditory' | 'kinesthetic';
 
+// Language variant type for onboarding
+export type LanguageVariant = 'BRITISH' | 'AMERICAN' | 'AUSTRALIAN';
+
 // Settings type
 export interface Settings {
   userName: string;
   language: string;
   tutorPersonality: TutorPersonality;
   learningStyle: LearningStyle;
+  // Onboarding preferences
+  languageVariant?: LanguageVariant;
+  dailyCommitment?: number;    // Minutes per day
+  preferredTime?: string;      // e.g., '09:00'
+  learningDays?: string[];     // e.g., ['Mon', 'Tue', 'Wed']
 }
 
 // Video metadata type
@@ -20,6 +28,8 @@ export interface VideoMetadata {
   duration: number;
   channel: string;
   publishDate?: string;
+  id?: string;           // YouTube video ID
+  channelId?: string;    // YouTube channel ID
 }
 
 // Knowledge base source type

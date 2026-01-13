@@ -10,36 +10,16 @@ import { StaggeredItem } from '../components/ui/StaggeredList';
 import CompletionCheckmark from '../components/ui/CompletionCheckmark';
 import Tooltip from '../components/ui/Tooltip';
 import { useAuthStore } from '../stores/authStore';
-
-interface Goal {
-  id: string;
-  title: string;
-  goalType: 'TIME' | 'TOPIC' | 'OUTCOME';
-  targetValue: number | null;
-  currentValue: number;
-  targetUnit: string | null;
-  deadline: string | null;
-  status: 'ACTIVE' | 'COMPLETED' | 'ABANDONED';
-  completedAt: string | null;
-  createdAt: string;
-  milestones: Milestone[];
-}
-
-interface GoalSuggestion {
-  id: string;
-  type: 'TIME' | 'TOPIC' | 'OUTCOME';
-  title: string;
-  description: string;
-  targetValue?: number;
-  targetUnit?: string;
-  reason: string;
-}
-
-interface Milestone {
-  id: string;
-  milestonePercentage: number;
-  reachedAt: string | null;
-}
+import {
+  useGoals,
+  useGoalSuggestions,
+  useCreateGoal,
+  useUpdateGoal,
+  useDeleteGoal,
+  type Goal,
+  type GoalSuggestion,
+  type GoalStatus,
+} from '../hooks';
 
 interface WizardData {
   goalType: 'TIME' | 'TOPIC' | 'OUTCOME' | null;
@@ -48,8 +28,6 @@ interface WizardData {
   targetUnit: string;
   deadline: string;
 }
-
-const API_BASE = 'http://localhost:3001/api';
 
 const GOAL_TYPE_INFO = {
   TIME: {
@@ -88,9 +66,6 @@ const GOAL_TYPE_INFO = {
 };
 
 export default function Goals() {
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
@@ -101,10 +76,7 @@ export default function Goals() {
     targetUnit: '',
     deadline: '',
   });
-  const [submitting, setSubmitting] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'COMPLETED' | 'ABANDONED'>('ACTIVE');
-  const [suggestions, setSuggestions] = useState<GoalSuggestion[]>([]);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<GoalStatus>('ACTIVE');
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [editData, setEditData] = useState<{ targetValue: number | null; deadline: string }>({
@@ -114,8 +86,29 @@ export default function Goals() {
   const [showCompletionCheckmark, setShowCompletionCheckmark] = useState(false);
 
   const navigate = useNavigate();
-  const { accessToken, isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
 
+  // TanStack Query hooks
+  const {
+    data: goals = [],
+    isPending: loading,
+    error: goalsError,
+    refetch: refetchGoals,
+  } = useGoals(statusFilter);
+
+  const {
+    data: suggestions = [],
+    isPending: loadingSuggestions,
+  } = useGoalSuggestions();
+
+  const createGoal = useCreateGoal();
+  const updateGoal = useUpdateGoal();
+  const deleteGoal = useDeleteGoal();
+
+  const error = goalsError?.message || null;
+  const submitting = createGoal.isPending || updateGoal.isPending || deleteGoal.isPending;
+
+  // Redirect non-authenticated or non-PRO users
   useEffect(() => {
     if (!isAuthenticated()) {
       navigate('/login');
@@ -125,58 +118,7 @@ export default function Goals() {
       navigate('/pricing');
       return;
     }
-    fetchGoals();
-    fetchSuggestions();
-  }, [accessToken, isAuthenticated, user, navigate, statusFilter]);
-
-  const fetchGoals = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch(`${API_BASE}/goals?status=${statusFilter}`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to fetch goals');
-      }
-
-      const data = await response.json();
-      setGoals(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load goals');
-      setToast({ message: 'Failed to load goals', type: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchSuggestions = async () => {
-    try {
-      setLoadingSuggestions(true);
-
-      const response = await fetch(`${API_BASE}/goals/suggestions`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSuggestions(data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch suggestions:', err);
-    } finally {
-      setLoadingSuggestions(false);
-    }
-  };
+  }, [isAuthenticated, user, navigate]);
 
   const handleUseSuggestion = (suggestion: GoalSuggestion) => {
     setWizardData({
@@ -201,38 +143,27 @@ export default function Goals() {
   const handleSaveEdit = async () => {
     if (!editingGoal) return;
 
-    try {
-      setSubmitting(true);
-
-      const response = await fetch(`${API_BASE}/goals/${editingGoal.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
+    updateGoal.mutate(
+      {
+        id: editingGoal.id,
+        data: {
           ...(editData.targetValue !== null && { targetValue: editData.targetValue }),
           deadline: editData.deadline || null,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to update goal');
+        },
+      },
+      {
+        onSuccess: () => {
+          setToast({ message: 'Goal updated successfully!', type: 'success' });
+          setEditingGoal(null);
+        },
+        onError: (err) => {
+          setToast({
+            message: err instanceof Error ? err.message : 'Failed to update goal',
+            type: 'error',
+          });
+        },
       }
-
-      setToast({ message: 'Goal updated successfully!', type: 'success' });
-      setEditingGoal(null);
-      fetchGoals();
-    } catch (err) {
-      setToast({
-        message: err instanceof Error ? err.message : 'Failed to update goal',
-        type: 'error',
-      });
-    } finally {
-      setSubmitting(false);
-    }
+    );
   };
 
   const handleCreateGoal = async () => {
@@ -241,42 +172,28 @@ export default function Goals() {
       return;
     }
 
-    try {
-      setSubmitting(true);
-
-      const response = await fetch(`${API_BASE}/goals`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
+    createGoal.mutate(
+      {
+        title: wizardData.title,
+        goalType: wizardData.goalType,
+        ...(wizardData.targetValue !== null && { targetValue: wizardData.targetValue }),
+        ...(wizardData.targetUnit && { targetUnit: wizardData.targetUnit }),
+        ...(wizardData.deadline && { deadline: wizardData.deadline }),
+      },
+      {
+        onSuccess: () => {
+          setToast({ message: 'Goal created successfully!', type: 'success' });
+          setShowWizard(false);
+          resetWizard();
         },
-        credentials: 'include',
-        body: JSON.stringify({
-          title: wizardData.title,
-          goalType: wizardData.goalType,
-          ...(wizardData.targetValue !== null && { targetValue: wizardData.targetValue }),
-          ...(wizardData.targetUnit && { targetUnit: wizardData.targetUnit }),
-          ...(wizardData.deadline && { deadline: wizardData.deadline }),
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to create goal');
+        onError: (err) => {
+          setToast({
+            message: err instanceof Error ? err.message : 'Failed to create goal',
+            type: 'error',
+          });
+        },
       }
-
-      setToast({ message: 'Goal created successfully!', type: 'success' });
-      setShowWizard(false);
-      resetWizard();
-      fetchGoals();
-    } catch (err) {
-      setToast({
-        message: err instanceof Error ? err.message : 'Failed to create goal',
-        type: 'error',
-      });
-    } finally {
-      setSubmitting(false);
-    }
+    );
   };
 
   const resetWizard = () => {
@@ -293,70 +210,47 @@ export default function Goals() {
   const handleDeleteGoal = async (goalId: string) => {
     if (!confirm('Are you sure you want to delete this goal?')) return;
 
-    try {
-      const response = await fetch(`${API_BASE}/goals/${goalId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to delete goal');
-      }
-
-      setToast({ message: 'Goal deleted', type: 'success' });
-      fetchGoals();
-    } catch (err) {
-      setToast({
-        message: err instanceof Error ? err.message : 'Failed to delete goal',
-        type: 'error',
-      });
-    }
+    deleteGoal.mutate(goalId, {
+      onSuccess: () => {
+        setToast({ message: 'Goal deleted', type: 'success' });
+      },
+      onError: (err) => {
+        setToast({
+          message: err instanceof Error ? err.message : 'Failed to delete goal',
+          type: 'error',
+        });
+      },
+    });
   };
 
   const handleMarkComplete = async (goalId: string) => {
     if (!confirm('Mark this goal as completed?')) return;
 
-    try {
-      const response = await fetch(`${API_BASE}/goals/${goalId}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
+    updateGoal.mutate(
+      {
+        id: goalId,
+        data: {
           status: 'COMPLETED',
           completedAt: new Date().toISOString(),
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to complete goal');
+        },
+      },
+      {
+        onSuccess: () => {
+          // Show completion checkmark animation
+          setShowCompletionCheckmark(true);
+          // Delay the toast until after animation
+          setTimeout(() => {
+            setToast({ message: 'Goal completed! Great job!', type: 'success' });
+          }, 1000);
+        },
+        onError: (err) => {
+          setToast({
+            message: err instanceof Error ? err.message : 'Failed to complete goal',
+            type: 'error',
+          });
+        },
       }
-
-      // Show completion checkmark animation
-      setShowCompletionCheckmark(true);
-      // Delay the toast and refresh until after animation
-      setTimeout(() => {
-        setToast({ message: 'Goal completed! Great job!', type: 'success' });
-        fetchGoals();
-      }, 1000);
-    } catch (err) {
-      setToast({
-        message: err instanceof Error ? err.message : 'Failed to complete goal',
-        type: 'error',
-      });
-    }
-  };
-
-  const calculateProgress = (goal: Goal): number => {
-    if (!goal.targetValue) return 0;
-    return Math.min((goal.currentValue / goal.targetValue) * 100, 100);
+    );
   };
 
   const renderWizardStep = () => {
@@ -731,7 +625,7 @@ export default function Goals() {
       {error ? (
         <Card className="text-center py-8">
           <p className="text-error mb-4">{error}</p>
-          <Button onClick={fetchGoals}>Try Again</Button>
+          <Button onClick={() => refetchGoals()}>Try Again</Button>
         </Card>
       ) : goals.length === 0 ? (
         <Card className="text-center py-12">

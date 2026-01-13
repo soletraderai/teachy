@@ -19,7 +19,7 @@ export default function Library() {
 
   // Sync with cloud when authenticated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated()) {
       syncWithCloud();
     }
   }, [isAuthenticated, syncWithCloud]);

@@ -4,7 +4,7 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { useAuthStore } from '../stores/authStore';
 import { useSettingsStore } from '../stores/settingsStore';
-import type { TutorPersonality } from '../types';
+import type { TutorPersonality, LearningStyle } from '../types';
 
 type OnboardingStep = 'welcome' | 'learning-style' | 'personality' | 'language-variant' | 'commitment' | 'complete';
 
@@ -53,7 +53,7 @@ const languageVariants: {
   },
 ];
 
-const learningStyles = [
+const learningStyles: Array<{ id: LearningStyle; label: string; description: string; icon: JSX.Element }> = [
   {
     id: 'visual',
     label: 'Visual',
@@ -86,7 +86,7 @@ const learningStyles = [
     ),
   },
   {
-    id: 'hands-on',
+    id: 'kinesthetic',
     label: 'Hands-on',
     description: 'Learn by doing and practical examples',
     icon: (
@@ -181,7 +181,7 @@ export default function Onboarding() {
   const savedProgress = loadOnboardingProgress();
 
   const [step, setStep] = useState<OnboardingStep>(savedProgress.step || 'welcome');
-  const [selectedStyle, setSelectedStyle] = useState(savedProgress.selectedStyle || settings.learningStyle || 'visual');
+  const [selectedStyle, setSelectedStyle] = useState<LearningStyle>((savedProgress.selectedStyle as LearningStyle) || settings.learningStyle || 'visual');
   const [selectedPersonality, setSelectedPersonality] = useState<TutorPersonality>(
     savedProgress.selectedPersonality || settings.tutorPersonality || 'COACH'
   );

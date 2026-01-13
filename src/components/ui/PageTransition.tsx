@@ -1,57 +1,95 @@
+import { ReactNode } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
-import { useRef, useEffect, useState, ReactNode } from 'react';
 
 interface PageTransitionProps {
   children: ReactNode;
 }
 
+// Page transition variants
+const pageVariants = {
+  initial: {
+    opacity: 0,
+    y: 8,
+  },
+  animate: {
+    opacity: 1,
+    y: 0,
+  },
+  exit: {
+    opacity: 0,
+    y: -8,
+  },
+};
+
+// Transition configuration
+const pageTransition = {
+  type: 'tween' as const,
+  ease: 'easeInOut' as const,
+  duration: 0.2,
+};
+
 export default function PageTransition({ children }: PageTransitionProps) {
   const location = useLocation();
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [displayChildren, setDisplayChildren] = useState(children);
-  const prevLocationRef = useRef(location.pathname);
-  const transitionTimeout = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    // Only animate when location actually changes
-    if (location.pathname !== prevLocationRef.current) {
-      // Start exit animation
-      setIsTransitioning(true);
-
-      // Clear any existing timeout
-      if (transitionTimeout.current) {
-        clearTimeout(transitionTimeout.current);
-      }
-
-      // After exit animation completes, update content and start enter animation
-      transitionTimeout.current = setTimeout(() => {
-        setDisplayChildren(children);
-        prevLocationRef.current = location.pathname;
-
-        // Small delay before enter animation
-        setTimeout(() => {
-          setIsTransitioning(false);
-        }, 50);
-      }, 200); // Exit animation duration
-    } else {
-      // Same path, just update children immediately
-      setDisplayChildren(children);
-    }
-
-    return () => {
-      if (transitionTimeout.current) {
-        clearTimeout(transitionTimeout.current);
-      }
-    };
-  }, [location.pathname, children]);
 
   return (
-    <div
-      className={`page-transition ${
-        isTransitioning ? 'page-exit' : 'page-enter'
-      }`}
-    >
-      {displayChildren}
-    </div>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={location.pathname}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        variants={pageVariants}
+        transition={pageTransition}
+        className="page-transition"
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+// Fade-only variant for simpler transitions
+export function FadeTransition({ children }: PageTransitionProps) {
+  const location = useLocation();
+
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={location.pathname}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+// Slide transition for modals/panels
+export function SlideTransition({
+  children,
+  direction = 'right'
+}: PageTransitionProps & { direction?: 'left' | 'right' | 'up' | 'down' }) {
+  const offsets = {
+    left: { x: -20, y: 0 },
+    right: { x: 20, y: 0 },
+    up: { x: 0, y: -20 },
+    down: { x: 0, y: 20 },
+  };
+
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        initial={{ opacity: 0, ...offsets[direction] }}
+        animate={{ opacity: 1, x: 0, y: 0 }}
+        exit={{ opacity: 0, ...offsets[direction] }}
+        transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
   );
 }

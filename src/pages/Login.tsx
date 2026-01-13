@@ -7,6 +7,7 @@ import Toast from '../components/ui/Toast';
 import MigrationPrompt from '../components/ui/MigrationPrompt';
 import { useAuthStore, authApi } from '../stores/authStore';
 import { useSessionStore } from '../stores/sessionStore';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -214,7 +215,22 @@ export default function Login() {
               variant="ghost"
               size="lg"
               className="w-full flex items-center justify-center gap-3"
-              onClick={() => setToast({ message: 'Google sign-in coming soon!', type: 'info' })}
+              onClick={async () => {
+                if (!isSupabaseConfigured()) {
+                  setToast({ message: 'Google sign-in is not configured', type: 'info' });
+                  return;
+                }
+                try {
+                  setLoading(true);
+                  await authApi.signInWithGoogle();
+                  // User will be redirected to Google
+                } catch (err) {
+                  setLoading(false);
+                  const message = err instanceof Error ? err.message : 'Google sign-in failed';
+                  setToast({ message, type: 'error' });
+                }
+              }}
+              disabled={isLoading}
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path

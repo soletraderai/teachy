@@ -5,7 +5,7 @@ import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import Card from '../components/ui/Card';
 import Toast from '../components/ui/Toast';
-import Skeleton, { SettingsSectionSkeleton } from '../components/ui/Skeleton';
+import Skeleton from '../components/ui/Skeleton';
 import AnimatedNumber from '../components/ui/AnimatedNumber';
 import CommitmentCalendar from '../components/ui/CommitmentCalendar';
 import { useSettingsStore } from '../stores/settingsStore';
@@ -143,7 +143,7 @@ export default function Settings() {
     language: settings.language,
     tutorPersonality: settings.tutorPersonality || 'PROFESSOR',
     learningStyle: settings.learningStyle || 'visual',
-    displayName: user?.name || settings.userName || '',
+    displayName: user?.displayName || settings.userName || '',
     avatarUrl: user?.avatarUrl || '',
   });
 
@@ -679,7 +679,7 @@ export default function Settings() {
         exportDate: new Date().toISOString(),
         profile: {
           email: user?.email,
-          name: user?.name,
+          name: user?.displayName,
           tier: user?.tier,
         },
         settings: {
@@ -1867,8 +1867,8 @@ export default function Settings() {
                       <div key={pattern.id} className="text-sm bg-background p-2 border border-border/50">
                         <span className="text-text/70">
                           Session at <strong className="text-text">{(pattern.patternData.timeOfDay as string) || 'unknown time'}</strong>
-                          {pattern.patternData.questionsAnswered && (
-                            <> - {pattern.patternData.questionsCorrect as number}/{pattern.patternData.questionsAnswered as number} correct</>
+                          {typeof pattern.patternData.questionsAnswered === 'number' && (
+                            <> - {(pattern.patternData.questionsCorrect as number) || 0}/{pattern.patternData.questionsAnswered} correct</>
                           )}
                         </span>
                       </div>

@@ -1,25 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import ProgressBar from '../components/ui/ProgressBar';
 import StaggeredList, { StaggeredItem } from '../components/ui/StaggeredList';
 import { useAuthStore } from '../stores/authStore';
 import { useSessionStore } from '../stores/sessionStore';
-
-interface CommitmentData {
-  date: string;
-  targetMinutes: number;
-  baseTargetMinutes: number;
-  currentMinutes: number;
-  progress: number;
-  commitmentMet: boolean;
-  questionsAnswered: number;
-  sessionsCompleted: number;
-  busyWeekMode: boolean;
-  vacationMode: boolean;
-}
-
-const API_BASE = 'http://localhost:3001/api';
+import { useCommitment, useLearningInsights } from '../hooks';
 
 type ChartView = 'week' | 'month';
 
@@ -30,25 +16,24 @@ interface DayActivity {
   sessions: number;
 }
 
-interface LearningInsights {
-  bestTime: string;
-  avgSessionDuration: number;
-  preferredDifficulty: string;
-  learningStreak: number;
-  patterns: { type: string; description: string }[];
-}
-
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { accessToken, isAuthenticated, user } = useAuthStore();
+  const { user } = useAuthStore();
   const { library } = useSessionStore();
-  const [commitment, setCommitment] = useState<CommitmentData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [chartView, setChartView] = useState<ChartView>('week');
-  const [insights, setInsights] = useState<LearningInsights | null>(null);
 
   const isPro = user?.tier === 'PRO';
+
+  // Use TanStack Query hooks for data fetching
+  const {
+    data: commitment,
+    isPending: loading,
+    error: commitmentError,
+  } = useCommitment();
+
+  const { data: insights } = useLearningInsights();
+
+  const error = commitmentError?.message || null;
 
   // Get recent sessions (last 3)
   const recentSessions = library.sessions.slice(0, 3);
@@ -96,135 +81,6 @@ export default function Dashboard() {
 
   const activityData = getActivityData();
   const maxMinutes = Math.max(...activityData.map((d) => d.minutes), 1);
-
-  useEffect(() => {
-    const CACHE_KEY = 'dashboard_commitment_cache';
-    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-    const fetchCommitment = async () => {
-      if (!isAuthenticated()) {
-        setLoading(false);
-        return;
-      }
-
-      // Check cache first for instant load
-      try {
-        const cached = localStorage.getItem(CACHE_KEY);
-        if (cached) {
-          const { data, timestamp } = JSON.parse(cached);
-          const cacheAge = Date.now() - timestamp;
-          if (cacheAge < CACHE_DURATION) {
-            setCommitment(data);
-            setLoading(false);
-            // Background refresh if cache is older than 1 minute
-            if (cacheAge > 60 * 1000) {
-              // Continue to fetch fresh data in background
-            } else {
-              return; // Cache is fresh, no need to fetch
-            }
-          }
-        }
-      } catch {
-        // Ignore cache errors
-      }
-
-      try {
-        const response = await fetch(`${API_BASE}/commitment/today`, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch commitment data');
-        }
-
-        const data = await response.json();
-        setCommitment(data);
-
-        // Cache the response
-        try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify({
-            data,
-            timestamp: Date.now(),
-          }));
-        } catch {
-          // Ignore cache write errors
-        }
-      } catch (err) {
-        console.error('Failed to fetch commitment:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load commitment');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCommitment();
-  }, [accessToken, isAuthenticated]);
-
-  // Fetch learning insights for Pro users
-  useEffect(() => {
-    const INSIGHTS_CACHE_KEY = 'dashboard_insights_cache';
-    const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes for insights
-
-    const fetchInsights = async () => {
-      if (!isPro || !isAuthenticated()) return;
-
-      // Check cache first for instant load
-      try {
-        const cached = localStorage.getItem(INSIGHTS_CACHE_KEY);
-        if (cached) {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < CACHE_DURATION) {
-            setInsights(data);
-            return; // Cache is fresh
-          }
-        }
-      } catch {
-        // Ignore cache errors
-      }
-
-      try {
-        const response = await fetch(`${API_BASE}/learning-model`, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          credentials: 'include',
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          // Transform API data to insights format
-          const insightsData = {
-            bestTime: data.bestTimeOfDay || 'Morning',
-            avgSessionDuration: data.avgSessionDuration || 15,
-            preferredDifficulty: data.preferredDifficulty || 'Medium',
-            learningStreak: data.learningStreak || 0,
-            patterns: data.patterns?.slice(0, 3).map((p: any) => ({
-              type: p.signalType || 'general',
-              description: p.insight || 'Keep learning consistently',
-            })) || [],
-          };
-          setInsights(insightsData);
-
-          // Cache the insights
-          try {
-            localStorage.setItem(INSIGHTS_CACHE_KEY, JSON.stringify({
-              data: insightsData,
-              timestamp: Date.now(),
-            }));
-          } catch {
-            // Ignore cache write errors
-          }
-        }
-      } catch (err) {
-        console.error('Failed to fetch insights:', err);
-      }
-    };
-
-    fetchInsights();
-  }, [isPro, accessToken, isAuthenticated]);
 
   const formatTime = (minutes: number) => {
     if (minutes < 60) {
@@ -385,7 +241,7 @@ export default function Dashboard() {
                 <span className="font-heading font-bold text-lg">
                   {(() => {
                     const totalAnswered = library.sessions.reduce((acc, s) => acc + s.score.questionsAnswered, 0);
-                    const totalCorrect = library.sessions.reduce((acc, s) => acc + (s.score.correctAnswers || 0), 0);
+                    const totalCorrect = library.sessions.reduce((acc, s) => acc + (s.score.questionsCorrect || 0), 0);
                     if (totalAnswered === 0) return '—';
                     return `${Math.round((totalCorrect / totalAnswered) * 100)}%`;
                   })()}

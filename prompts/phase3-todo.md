@@ -7,9 +7,11 @@
 - Ajax search for live results when searching. Search is to show 5 options for autocomplete underneath the search term. Also update library results on live search.
 - Need to ensure that we only accept YouTube URLs for now
 - Add in a cleaner centralized route management system
+- Need a strategy in place to ensure that our platform is not taking away from creators and we are trying to give them as much value as possible. How can we have a function to leave a like and a commment for the user? Any other suggestions?
 
-**Finalising Phase 2**
-- What features are still yet to be completed? Why were they not completed? What needs to happen for these to be completed? Define what success looks like.
+**Prcing**
+- Need to install the Stripe skill to set up pricing
+- Base the pricing model of the WISPR app that I use (whispr) where we will offer users 7 or 14 days, I don't know which one yet, free trial on Pro so they can have full access to all the Pro features and then offer them the opportunity to sign up to Pro. Not too sure if we offer them a discount at the end of their trial or what we do there. Happy to be guided by research.
 
 **Deployment Strategy**
 - Digital Ocean for Hosting
