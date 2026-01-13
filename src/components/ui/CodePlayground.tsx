@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import CodeEditor from './CodeEditor';
+import { useAuthStore } from '../../stores/authStore';
 
 interface CodePlaygroundProps {
   initialCode?: string;
@@ -203,6 +205,9 @@ export default function CodePlayground({
   className = '',
   onSaveSnippet,
 }: CodePlaygroundProps) {
+  const { user } = useAuthStore();
+  const isPro = user?.tier === 'PRO';
+
   const [code, setCode] = useState(initialCode);
   const [result, setResult] = useState<ExecutionResult | null>(null);
   const [isRunning, setIsRunning] = useState(false);
@@ -212,6 +217,56 @@ export default function CodePlayground({
 
   // Track if code has been modified from original
   const hasChanges = code !== initialCode;
+
+  // Show upgrade prompt for free users
+  if (!isPro) {
+    return (
+      <div className={`border-3 border-border bg-gray-900 text-white ${className}`}>
+        <div className="flex items-center justify-between px-3 py-2 bg-gray-800 border-b-2 border-border">
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-red-500" />
+              <div className="w-3 h-3 rounded-full bg-yellow-500" />
+              <div className="w-3 h-3 rounded-full bg-green-500" />
+            </div>
+            <span className="text-xs text-gray-400 font-mono uppercase ml-2">{language}</span>
+          </div>
+          <span className="text-xs text-yellow-400 font-medium">PRO FEATURE</span>
+        </div>
+
+        {/* Blurred code preview */}
+        <div className="relative">
+          <div className="p-4 font-mono text-sm text-gray-500 blur-sm select-none">
+            <pre>{initialCode.split('\n').slice(0, 5).join('\n')}...</pre>
+          </div>
+
+          {/* Upgrade overlay */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/80 backdrop-blur-sm">
+            <div className="text-center p-6">
+              <div className="w-16 h-16 mx-auto mb-4 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Interactive Code Editor</h3>
+              <p className="text-gray-400 text-sm mb-4 max-w-xs">
+                Run and experiment with code examples in real-time. Upgrade to Pro to unlock the interactive code playground.
+              </p>
+              <Link
+                to="/pricing"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold border-2 border-black transition-colors"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                </svg>
+                Upgrade to Pro
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleRun = async (codeToRun: string) => {
     const supportedLanguages = ['javascript', 'typescript', 'python'];
