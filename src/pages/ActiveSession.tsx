@@ -135,6 +135,7 @@ export default function ActiveSession() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [isDigDeeperOpen, setIsDigDeeperOpen] = useState(false);
   const [isSourcesExpanded, setIsSourcesExpanded] = useState(false);
+  const [showCodeEditor, setShowCodeEditor] = useState(true);
 
   // Help panel context
   const { openHelp } = useHelpContext();
@@ -615,40 +616,58 @@ export default function ActiveSession() {
             {/* Code Editor for programming topics */}
             {currentTopic.codeExample && (
               <div>
-                <h3 className="font-heading font-semibold text-text mb-2 flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                  </svg>
-                  Code Example
-                  {['javascript', 'typescript', 'python'].includes(currentTopic.codeLanguage || '') && (
-                    <span className="text-xs text-text/60 font-normal ml-2">(Click Run to execute)</span>
-                  )}
-                  {['html', 'css'].includes(currentTopic.codeLanguage || '') && (
-                    <span className="text-xs text-text/60 font-normal ml-2">(Live Preview)</span>
-                  )}
-                </h3>
-                {(['javascript', 'typescript', 'python', 'html', 'css'].includes(currentTopic.codeLanguage || 'javascript')) ? (
-                  <CodePlayground
-                    initialCode={currentTopic.codeExample}
-                    language={currentTopic.codeLanguage || 'javascript'}
-                    onSaveSnippet={(code, lang) => {
-                      if (sessionId) {
-                        saveSnippet(sessionId, {
-                          code,
-                          language: lang,
-                          topicId: currentTopic.id,
-                          topicTitle: currentTopic.title,
-                        });
-                      }
-                    }}
-                  />
-                ) : (
-                  <CodeEditor
-                    initialCode={currentTopic.codeExample}
-                    language={currentTopic.codeLanguage}
-                    readOnly={true}
-                    className="max-h-[300px] overflow-auto"
-                  />
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-heading font-semibold text-text flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                    </svg>
+                    Code Example
+                    {['javascript', 'typescript', 'python'].includes(currentTopic.codeLanguage || '') && (
+                      <span className="text-xs text-text/60 font-normal ml-2">(Click Run to execute)</span>
+                    )}
+                    {['html', 'css'].includes(currentTopic.codeLanguage || '') && (
+                      <span className="text-xs text-text/60 font-normal ml-2">(Live Preview)</span>
+                    )}
+                  </h3>
+                  <button
+                    onClick={() => setShowCodeEditor(!showCodeEditor)}
+                    className="flex items-center gap-1 px-3 py-1 text-sm font-heading border-2 border-border bg-surface hover:bg-primary/10 transition-colors"
+                    aria-label={showCodeEditor ? 'Hide code editor' : 'Show code editor'}
+                  >
+                    <MaterialIcon
+                      name={showCodeEditor ? 'visibility_off' : 'visibility'}
+                      size="sm"
+                      decorative
+                    />
+                    {showCodeEditor ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                {showCodeEditor && (
+                  <>
+                    {(['javascript', 'typescript', 'python', 'html', 'css'].includes(currentTopic.codeLanguage || 'javascript')) ? (
+                      <CodePlayground
+                        initialCode={currentTopic.codeExample}
+                        language={currentTopic.codeLanguage || 'javascript'}
+                        onSaveSnippet={(code, lang) => {
+                          if (sessionId) {
+                            saveSnippet(sessionId, {
+                              code,
+                              language: lang,
+                              topicId: currentTopic.id,
+                              topicTitle: currentTopic.title,
+                            });
+                          }
+                        }}
+                      />
+                    ) : (
+                      <CodeEditor
+                        initialCode={currentTopic.codeExample}
+                        language={currentTopic.codeLanguage}
+                        readOnly={true}
+                        className="max-h-[300px] overflow-auto"
+                      />
+                    )}
+                  </>
                 )}
               </div>
             )}
