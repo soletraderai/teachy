@@ -142,7 +142,7 @@ export default function ActiveSession() {
   });
 
   // Help panel context
-  const { openHelp } = useHelpContext();
+  const { openHelp, closeHelp } = useHelpContext();
 
   // Save code editor preference to localStorage
   useEffect(() => {
@@ -401,6 +401,9 @@ export default function ActiveSession() {
 
   // Move to next topic or complete session
   const moveToNextTopic = () => {
+    // Close help panel when moving to next question (Feature 770)
+    closeHelp();
+
     const nextIndex = currentTopicIndex + 1;
 
     if (nextIndex >= session.topics.length) {
