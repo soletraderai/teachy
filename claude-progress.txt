@@ -2,6 +2,50 @@
 
 ## Phase 3 Progress - COMPLETE! 100% (176/176)
 
+### Session 17 - January 13, 2026 (Regression Verification)
+
+**Regression Testing Completed:**
+- All servers verified running (localhost:5173, localhost:5174 frontend, localhost:3001 proxy)
+- Tested 3 randomly selected features for regression:
+
+1. ✅ **Feature 804: URL validation - Accept URLs with parameters**
+   - Entered URL: `https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=120s`
+   - URL accepted without error
+   - Video ID extracted correctly (dQw4w9WgXcQ)
+   - Session overview loaded with correct video metadata (Rick Astley - Never Gonna Give You Up)
+   - Extra parameter (&t=120s) properly ignored
+
+2. ✅ **Feature 885: Neobrutalism - Icons aesthetic**
+   - Material Icons throughout app are bold and clear
+   - Verified icons in sidebar: home, dashboard, subscriptions, video_library, trending_up, timer, settings, help_outline
+   - All icons render correctly with proper sizing
+   - Icons maintain neobrutalism style (not overly detailed)
+
+3. ✅ **Feature 779: Creator engagement - Comment button**
+   - CreatorCard component exists at src/components/ui/CreatorCard.tsx
+   - Comment button implementation verified (lines 175-178)
+   - `handleCommentClick` opens `${videoUrl}#comments` to YouTube comment section
+   - Click is tracked via `onComment` callback
+
+**Visual Verification:**
+- Screenshots captured: regression-session-overview.png, regression-active-session.png, regression-dashboard.png
+- Neobrutalism design intact throughout:
+  - Hard black borders (3px)
+  - Offset shadows
+  - Yellow primary color (#FFDE59)
+  - Bold typography
+  - Chunky buttons
+
+**Console Errors (Expected):**
+- 404 errors for `/api/commitment/today`, `/api/learning-model`, `/api/topics/due-for-review`
+- These are backend API endpoints not implemented in the simple proxy server
+- Core functionality works with localStorage as specified in app_spec.txt
+
+**Status:** Phase 3 is fully complete and stable (176/176 features passing).
+No `phase4_spec.txt` exists - waiting for detailed Phase 4 specification.
+
+---
+
 ### Session 16 - January 13, 2026 (Regression Verification)
 
 **Regression Testing Completed:**
