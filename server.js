@@ -9,8 +9,19 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Enable CORS for frontend origin with credentials support
+// Accept multiple localhost ports since Vite may use 5173, 5174, 5175, etc.
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    // Allow any localhost origin for development
+    if (origin.match(/^http:\/\/localhost:\d+$/)) {
+      return callback(null, true);
+    }
+
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 app.use(express.json());
