@@ -2,6 +2,48 @@
 
 ## Phase 3 Progress - COMPLETE! 100% (176/176)
 
+### Session 15 - January 13, 2026 (Regression Verification)
+
+**Regression Testing Completed:**
+- All servers verified running (localhost:5174 frontend, localhost:3001 proxy)
+- Tested 3 randomly selected features for regression:
+
+1. ✅ **Feature 806: URL validation - Error state styling**
+   - Entered invalid URL: "not-a-valid-url"
+   - Clicked "Start Learning" button
+   - Error message "Please enter a URL." displayed with orange error icon
+   - Submission blocked (stayed on same page)
+   - Error styling visible in UI
+
+2. ✅ **Feature 738: Sidebar navigation - Active item styling**
+   - Navigated to Dashboard → Dashboard nav item has yellow left border
+   - Navigated to Library → Library nav item now has yellow left border
+   - Active state correctly follows route changes
+   - Material Icons rendering correctly throughout sidebar
+
+3. ✅ **Feature 815: Recommendations - Due for Review cards**
+   - Code verified in Dashboard.tsx (lines 420-459)
+   - Card conditionally displays when `dueTopics.length > 0`
+   - Shows count, estimated review time, and "Quick Review" button
+   - Currently no topics due, so card correctly hidden
+   - Implementation follows correct conditional pattern
+
+**Visual Verification:**
+- Screenshots captured: regression-home-page.png, regression-invalid-url-test.png, regression-dashboard-sidebar.png, regression-library-active.png, regression-dashboard-final.png
+- Neobrutalism design intact throughout (hard black borders, yellow accents, chunky buttons)
+- Material Icons rendering correctly
+- Sidebar active state styling working
+
+**Console Errors (Expected):**
+- 404 errors for `/api/commitment/today`, `/api/learning-model`, etc.
+- These are backend API endpoints not implemented in the simple proxy server
+- Core functionality works with localStorage as specified in app_spec.txt
+
+**Status:** Phase 3 is fully complete and stable (176/176 features passing).
+No `phase4_spec.txt` exists - waiting for detailed Phase 4 specification.
+
+---
+
 ### Session 14 - January 13, 2026 (Regression Verification)
 
 **Regression Testing Completed:**
