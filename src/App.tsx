@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/ui/Layout';
 import SidebarLayout from './components/ui/SidebarLayout';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import Home from './pages/Home';
 import Settings from './pages/Settings';
@@ -55,23 +56,25 @@ function App() {
             <Route path="404" element={<NotFound />} />
           </Route>
 
-          {/* App routes with sidebar navigation */}
-          <Route element={<SidebarLayout />}>
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="library" element={<Library />} />
-            <Route path="feed" element={<Feed />} />
-            <Route path="goals" element={<Goals />} />
-            <Route path="review" element={<ReviewSession />} />
-            <Route path="knowledge-map" element={<KnowledgeMap />} />
-            <Route path="timed-sessions" element={<TimedSessions />} />
-            <Route path="timed-sessions/history" element={<TimedSessionHistory />} />
-            <Route path="timed-sessions/:sessionId/active" element={<TimedSessionActive />} />
-            <Route path="timed-sessions/:sessionId/results" element={<TimedSessionResults />} />
-            <Route path="session/:sessionId/overview" element={<SessionOverview />} />
-            <Route path="session/:sessionId/active" element={<ActiveSession />} />
-            <Route path="session/:sessionId/notes" element={<SessionNotes />} />
-            <Route path="checkout/success" element={<CheckoutSuccess />} />
+          {/* App routes with sidebar navigation - Protected by authentication */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<SidebarLayout />}>
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="library" element={<Library />} />
+              <Route path="feed" element={<Feed />} />
+              <Route path="goals" element={<Goals />} />
+              <Route path="review" element={<ReviewSession />} />
+              <Route path="knowledge-map" element={<KnowledgeMap />} />
+              <Route path="timed-sessions" element={<TimedSessions />} />
+              <Route path="timed-sessions/history" element={<TimedSessionHistory />} />
+              <Route path="timed-sessions/:sessionId/active" element={<TimedSessionActive />} />
+              <Route path="timed-sessions/:sessionId/results" element={<TimedSessionResults />} />
+              <Route path="session/:sessionId/overview" element={<SessionOverview />} />
+              <Route path="session/:sessionId/active" element={<ActiveSession />} />
+              <Route path="session/:sessionId/notes" element={<SessionNotes />} />
+              <Route path="checkout/success" element={<CheckoutSuccess />} />
+            </Route>
           </Route>
 
           {/* Catch-all redirect */}
