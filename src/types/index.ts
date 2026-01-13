@@ -113,6 +113,22 @@ export interface Session {
   status: 'processing' | 'overview' | 'active' | 'completed';
   savedSnippets?: CodeSnippet[];
   transcript?: string;  // Raw YouTube transcript text for note generation
+  structuredNotes?: StructuredNotes;  // AI-generated structured notes from transcript
+}
+
+// Structured notes generated from video transcript
+export interface NoteSection {
+  id: string;
+  title: string;
+  timestamp: string;  // Format: [MM:SS]
+  content: string;
+  keyPoints: string[];
+}
+
+export interface StructuredNotes {
+  generatedAt: number;
+  sections: NoteSection[];
+  summary: string;
 }
 
 // Library type (collection of sessions)

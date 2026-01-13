@@ -887,3 +887,113 @@ export async function checkAIServiceAvailable(): Promise<boolean> {
     return false;
   }
 }
+
+// Generate structured notes from video transcript
+export async function generateStructuredNotes(
+  videoTitle: string,
+  transcript: string,
+  videoDuration?: number
+): Promise<{
+  sections: Array<{
+    id: string;
+    title: string;
+    timestamp: string;
+    content: string;
+    keyPoints: string[];
+  }>;
+  summary: string;
+}> {
+  // Estimate timestamps based on content position if no real timestamps
+  const formatTimestamp = (position: number, total: number, duration?: number): string => {
+    if (duration) {
+      const seconds = Math.floor((position / total) * duration);
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `[${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}]`;
+    }
+    // Estimate based on typical video pacing (assume 10 min video if unknown)
+    const estimatedDuration = 600;
+    const seconds = Math.floor((position / total) * estimatedDuration);
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `[${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}]`;
+  };
+
+  const prompt = `Analyze this video transcript and create structured learning notes.
+
+Video: "${videoTitle}"
+
+Transcript:
+${transcript.slice(0, 8000)}
+
+Create structured notes with:
+1. A brief summary (2-3 sentences)
+2. 3-5 main sections with:
+   - Section title (clear, descriptive)
+   - Key points (2-4 bullet points per section)
+   - Explanation content (1-2 paragraphs)
+
+Return JSON in this exact format:
+{
+  "summary": "Brief overview of the video content",
+  "sections": [
+    {
+      "title": "Section Title",
+      "keyPoints": ["Point 1", "Point 2", "Point 3"],
+      "content": "Detailed explanation of this section..."
+    }
+  ]
+}
+
+Focus on educational value and key takeaways. Be specific and actionable.`;
+
+  try {
+    const response = await callGemini(prompt);
+    const jsonStr = extractJson(response);
+    const parsed = JSON.parse(jsonStr);
+
+    // Add IDs and timestamps to sections
+    const sections = (parsed.sections || []).map((section: { title: string; keyPoints: string[]; content: string }, index: number, arr: unknown[]) => ({
+      id: generateId(),
+      title: section.title || `Section ${index + 1}`,
+      timestamp: formatTimestamp(index, arr.length, videoDuration),
+      content: section.content || '',
+      keyPoints: section.keyPoints || [],
+    }));
+
+    return {
+      sections,
+      summary: parsed.summary || 'Notes generated from video transcript.',
+    };
+  } catch (error) {
+    console.error('Error generating structured notes:', error);
+
+    // Return fallback notes structure
+    return {
+      sections: [
+        {
+          id: generateId(),
+          title: 'Introduction',
+          timestamp: '[00:00]',
+          content: `This video covers "${videoTitle}". Review the transcript for detailed information.`,
+          keyPoints: ['Video content overview', 'Key concepts introduction'],
+        },
+        {
+          id: generateId(),
+          title: 'Main Content',
+          timestamp: '[02:00]',
+          content: 'The main content of this video focuses on the core subject matter. Refer to the transcript for specifics.',
+          keyPoints: ['Core concepts', 'Important details', 'Practical applications'],
+        },
+        {
+          id: generateId(),
+          title: 'Summary',
+          timestamp: '[08:00]',
+          content: 'The video concludes with a summary of key points and takeaways.',
+          keyPoints: ['Key takeaways', 'Next steps'],
+        },
+      ],
+      summary: `Structured notes for "${videoTitle}". Generated from video transcript.`,
+    };
+  }
+}

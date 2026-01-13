@@ -5,6 +5,8 @@ import Card from '../components/ui/Card';
 import { useSessionStore } from '../stores/sessionStore';
 import { useAuthStore } from '../stores/authStore';
 import { useDocumentTitle } from '../hooks';
+import { generateStructuredNotes } from '../services/gemini';
+import type { StructuredNotes } from '../types';
 
 const API_BASE = 'http://localhost:3001/api';
 
@@ -27,7 +29,7 @@ export default function SessionNotes() {
   useDocumentTitle('Session Notes');
   const { sessionId } = useParams();
   const navigate = useNavigate();
-  const { getSession } = useSessionStore();
+  const { getSession, updateSession } = useSessionStore();
   const { accessToken, isAuthenticated, user } = useAuthStore();
 
   const [showFollowPrompt, setShowFollowPrompt] = useState(false);
@@ -39,6 +41,9 @@ export default function SessionNotes() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [structuredNotes, setStructuredNotes] = useState<StructuredNotes | null>(null);
+  const [loadingNotes, setLoadingNotes] = useState(false);
+  const [notesError, setNotesError] = useState<string | null>(null);
 
   const session = sessionId ? getSession(sessionId) : undefined;
   const { library } = useSessionStore();
@@ -358,6 +363,71 @@ export default function SessionNotes() {
       return () => clearTimeout(timer);
     }
   }, [session]);
+
+  // Generate structured notes from transcript or topics
+  useEffect(() => {
+    const generateNotes = async () => {
+      if (!session || !sessionId) return;
+
+      // If notes already exist in the session, use them
+      if (session.structuredNotes) {
+        setStructuredNotes(session.structuredNotes);
+        return;
+      }
+
+      // If there's a transcript, generate notes from it
+      if (session.transcript) {
+        setLoadingNotes(true);
+        setNotesError(null);
+        try {
+          const notes = await generateStructuredNotes(
+            session.video.title,
+            session.transcript,
+            session.video.duration
+          );
+          const structuredNotesData: StructuredNotes = {
+            generatedAt: Date.now(),
+            sections: notes.sections,
+            summary: notes.summary,
+          };
+          setStructuredNotes(structuredNotesData);
+          // Save to session for future access
+          updateSession(sessionId, { structuredNotes: structuredNotesData });
+        } catch (error) {
+          console.error('Failed to generate structured notes:', error);
+          setNotesError('Failed to generate notes. Please try again later.');
+        } finally {
+          setLoadingNotes(false);
+        }
+      } else if (session.topics && session.topics.length > 0) {
+        // Generate notes from topics as fallback
+        const formatTimestamp = (index: number, total: number): string => {
+          const estimatedDuration = session.video.duration || 600;
+          const seconds = Math.floor((index / total) * estimatedDuration);
+          const mins = Math.floor(seconds / 60);
+          const secs = seconds % 60;
+          return `[${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}]`;
+        };
+
+        const topicNotes: StructuredNotes = {
+          generatedAt: Date.now(),
+          sections: session.topics.map((topic, index) => ({
+            id: topic.id,
+            title: topic.title,
+            timestamp: formatTimestamp(index, session.topics.length),
+            content: topic.summary,
+            keyPoints: topic.questions.slice(0, 3).map(q => q.text),
+          })),
+          summary: `Learning notes for "${session.video.title}" covering ${session.topics.length} key topics from ${session.video.channel}.`,
+        };
+        setStructuredNotes(topicNotes);
+        // Save to session for future access
+        updateSession(sessionId, { structuredNotes: topicNotes });
+      }
+    };
+
+    generateNotes();
+  }, [session, sessionId, updateSession]);
 
   // Generate a channelId from the channel name (slugified)
   const getChannelId = (channelName: string) => {
@@ -834,6 +904,103 @@ export default function SessionNotes() {
           </p>
         )}
       </Card>
+
+      {/* Structured Notes from Transcript */}
+      {(loadingNotes || structuredNotes || notesError) && (
+        <Card className="bg-accent/10 border-accent">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 flex items-center justify-center bg-accent border-2 border-border">
+              <svg
+                className="w-5 h-5 text-text"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h2 className="font-heading text-xl font-bold text-text">
+                Structured Learning Notes
+              </h2>
+              <p className="text-xs text-text/60">AI-generated notes from video transcript</p>
+            </div>
+          </div>
+
+          {loadingNotes && (
+            <div className="space-y-4">
+              <div className="animate-pulse">
+                <div className="h-4 bg-border/30 rounded w-3/4 mb-2" />
+                <div className="h-4 bg-border/30 rounded w-full mb-2" />
+                <div className="h-4 bg-border/30 rounded w-5/6" />
+              </div>
+              <p className="text-sm text-text/60 text-center">Generating structured notes...</p>
+            </div>
+          )}
+
+          {notesError && (
+            <div className="text-center py-4">
+              <p className="text-error mb-2">{notesError}</p>
+              <p className="text-sm text-text/60">Notes could not be generated for this session.</p>
+            </div>
+          )}
+
+          {structuredNotes && (
+            <div className="space-y-6">
+              {/* Summary */}
+              <div className="p-4 bg-surface border-2 border-border">
+                <h3 className="font-heading font-bold text-text mb-2">Summary</h3>
+                <p className="text-text/80">{structuredNotes.summary}</p>
+              </div>
+
+              {/* Sections with timestamps */}
+              <div className="space-y-4">
+                {structuredNotes.sections.map((section, index) => (
+                  <div
+                    key={section.id}
+                    className="p-4 bg-surface border-2 border-border"
+                  >
+                    <div className="flex items-start gap-3 mb-3">
+                      <span className="inline-flex items-center px-2 py-1 text-xs font-mono font-bold bg-accent/30 border border-border">
+                        {section.timestamp}
+                      </span>
+                      <h3 className="font-heading font-bold text-text flex-1">
+                        {index + 1}. {section.title}
+                      </h3>
+                    </div>
+
+                    {/* Key Points */}
+                    {section.keyPoints.length > 0 && (
+                      <ul className="mb-3 space-y-1">
+                        {section.keyPoints.map((point, pIndex) => (
+                          <li key={pIndex} className="flex items-start gap-2 text-sm">
+                            <span className="text-accent font-bold">•</span>
+                            <span className="text-text/80">{point}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {/* Content */}
+                    <p className="text-text/70 text-sm leading-relaxed">
+                      {section.content}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-xs text-text/50 text-center">
+                Generated from video transcript on {new Date(structuredNotes.generatedAt).toLocaleDateString()}
+              </p>
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* Recommendations / Next Steps */}
       {recommendations.length > 0 && (
