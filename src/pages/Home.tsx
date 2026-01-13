@@ -54,9 +54,16 @@ export default function Home() {
 
     // Match various YouTube URL formats
     const youtubePatterns = [
+      // Standard watch URL (with optional www)
       /^https?:\/\/(www\.)?youtube\.com\/watch\?v=[\w-]+/,
+      // Shortened youtu.be URL
       /^https?:\/\/youtu\.be\/[\w-]+/,
+      // Embedded URL
       /^https?:\/\/(www\.)?youtube\.com\/embed\/[\w-]+/,
+      // YouTube Shorts
+      /^https?:\/\/(www\.)?youtube\.com\/shorts\/[\w-]+/,
+      // Mobile URL (m.youtube.com)
+      /^https?:\/\/m\.youtube\.com\/watch\?v=[\w-]+/,
     ];
 
     return youtubePatterns.some((pattern) => pattern.test(trimmedUrl));
