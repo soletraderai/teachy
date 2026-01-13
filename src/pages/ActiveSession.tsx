@@ -135,10 +135,19 @@ export default function ActiveSession() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [isDigDeeperOpen, setIsDigDeeperOpen] = useState(false);
   const [isSourcesExpanded, setIsSourcesExpanded] = useState(false);
-  const [showCodeEditor, setShowCodeEditor] = useState(true);
+  const [showCodeEditor, setShowCodeEditor] = useState(() => {
+    // Load preference from localStorage, default to true
+    const stored = localStorage.getItem('quiztube_show_code_editor');
+    return stored !== null ? stored === 'true' : true;
+  });
 
   // Help panel context
   const { openHelp } = useHelpContext();
+
+  // Save code editor preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('quiztube_show_code_editor', String(showCodeEditor));
+  }, [showCodeEditor]);
 
   const session = sessionId ? getSession(sessionId) : undefined;
 
