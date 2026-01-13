@@ -4,7 +4,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Toast from '../components/ui/Toast';
 import { useAuthStore } from '../stores/authStore';
-import { useTimedSessionHistory, useCreateTimedSession } from '../hooks';
+import { useTimedSessionHistory, useCreateTimedSession, useDocumentTitle } from '../hooks';
 import type { TimedSessionType, TimedSessionConfig, TimedSession } from '../types';
 
 // Session configuration
@@ -88,6 +88,7 @@ const Icons = {
 };
 
 export default function TimedSessions() {
+  useDocumentTitle('Timed Sessions');
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
   const isPro = isAuthenticated() && user?.tier === 'PRO';

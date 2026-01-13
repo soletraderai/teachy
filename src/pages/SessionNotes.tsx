@@ -4,6 +4,7 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { useSessionStore } from '../stores/sessionStore';
 import { useAuthStore } from '../stores/authStore';
+import { useDocumentTitle } from '../hooks';
 
 const API_BASE = 'http://localhost:3001/api';
 
@@ -23,6 +24,7 @@ interface Recommendation {
 }
 
 export default function SessionNotes() {
+  useDocumentTitle('Session Notes');
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const { getSession } = useSessionStore();
@@ -239,7 +241,7 @@ export default function SessionNotes() {
     });
 
     md += `---\n`;
-    md += `*Exported from Teachy on ${new Date().toLocaleDateString()}*\n`;
+    md += `*Exported from QuizTube on ${new Date().toLocaleDateString()}*\n`;
 
     return md;
   };
@@ -323,7 +325,7 @@ export default function SessionNotes() {
           `).join('')}
 
           <hr>
-          <p><em>Exported from Teachy on ${new Date().toLocaleDateString()}</em></p>
+          <p><em>Exported from QuizTube on ${new Date().toLocaleDateString()}</em></p>
         </body>
       </html>
     `;

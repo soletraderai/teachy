@@ -4,8 +4,10 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Toast from '../components/ui/Toast';
 import { useAuthStore, authApi } from '../stores/authStore';
+import { useDocumentTitle } from '../hooks';
 
 export default function CheckoutSuccess() {
+  useDocumentTitle('Checkout Success');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { accessToken, setUser } = useAuthStore();

@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuthStore, authApi } from '../stores/authStore';
+import { useDocumentTitle } from '../hooks';
 
 export default function AuthCallback() {
+  useDocumentTitle('Authenticating');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [error, setError] = useState<string | null>(null);

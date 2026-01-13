@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
+import { useDocumentTitle } from '../hooks';
 
 const API_BASE = 'http://localhost:3001/api';
 
 export default function Unsubscribe() {
+  useDocumentTitle('Unsubscribe');
   const [searchParams] = useSearchParams();
   const userId = searchParams.get('userId');
   const token = searchParams.get('token');
@@ -51,7 +53,7 @@ export default function Unsubscribe() {
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
             <h1 className="font-heading text-4xl font-bold text-text">
-              Teachy
+              QuizTube
             </h1>
           </Link>
           <p className="mt-2 text-text/70 font-body">

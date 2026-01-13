@@ -31,3 +31,4 @@ export {
 // Utility hooks
 export { useDebounce } from './useDebounce';
 export { useOnlineStatus } from './useOnlineStatus';
+export { useDocumentTitle, APP_NAME } from './useDocumentTitle';

@@ -5,8 +5,10 @@ import Card from '../components/ui/Card';
 import Toast from '../components/ui/Toast';
 import { useSessionStore } from '../stores/sessionStore';
 import { formatDuration } from '../services/youtube';
+import { useDocumentTitle } from '../hooks';
 
 export default function SessionOverview() {
+  useDocumentTitle('Session Overview');
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const { getSession, setCurrentSession, updateSession } = useSessionStore();

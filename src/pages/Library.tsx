@@ -6,11 +6,12 @@ import Card from '../components/ui/Card';
 import { StaggeredItem } from '../components/ui/StaggeredList';
 import { useSessionStore } from '../stores/sessionStore';
 import { useAuthStore } from '../stores/authStore';
-import { useDebounce } from '../hooks/useDebounce';
+import { useDebounce, useDocumentTitle } from '../hooks';
 
 const ITEMS_PER_PAGE = 6; // 6 items for a 3-column grid layout
 
 export default function Library() {
+  useDocumentTitle('Library');
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 

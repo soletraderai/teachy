@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
 import Card from '../components/ui/Card';
+import { useDocumentTitle } from '../hooks';
 
 export default function Terms() {
+  useDocumentTitle('Terms of Service');
   return (
     <div className="max-w-4xl mx-auto">
       <Card className="p-8">
@@ -17,7 +19,7 @@ export default function Terms() {
           <section>
             <h2 className="font-heading text-xl font-bold mb-3">1. Acceptance of Terms</h2>
             <p className="text-text/80 leading-relaxed">
-              By accessing or using Teachy ("the Service"), you agree to be bound by these Terms of Service.
+              By accessing or using QuizTube ("the Service"), you agree to be bound by these Terms of Service.
               If you do not agree to these terms, please do not use our Service.
             </p>
           </section>
@@ -25,7 +27,7 @@ export default function Terms() {
           <section>
             <h2 className="font-heading text-xl font-bold mb-3">2. Description of Service</h2>
             <p className="text-text/80 leading-relaxed">
-              Teachy is an educational platform that transforms YouTube videos into interactive learning
+              QuizTube is an educational platform that transforms YouTube videos into interactive learning
               sessions. We use AI to generate questions, provide feedback, and help you learn more
               effectively from video content.
             </p>
@@ -46,7 +48,7 @@ export default function Terms() {
           <section>
             <h2 className="font-heading text-xl font-bold mb-3">4. Subscription and Payments</h2>
             <p className="text-text/80 leading-relaxed mb-3">
-              Teachy offers both free and paid subscription tiers:
+              QuizTube offers both free and paid subscription tiers:
             </p>
             <ul className="list-disc list-inside text-text/80 space-y-2 ml-4">
               <li><strong>Free tier:</strong> Limited sessions per month with basic features</li>
@@ -74,7 +76,7 @@ export default function Terms() {
           <section>
             <h2 className="font-heading text-xl font-bold mb-3">6. Intellectual Property</h2>
             <p className="text-text/80 leading-relaxed">
-              The Service and its original content, features, and functionality are owned by Teachy and
+              The Service and its original content, features, and functionality are owned by QuizTube and
               are protected by international copyright, trademark, and other intellectual property laws.
               Your learning data and personal notes remain your property.
             </p>
@@ -83,7 +85,7 @@ export default function Terms() {
           <section>
             <h2 className="font-heading text-xl font-bold mb-3">7. Third-Party Content</h2>
             <p className="text-text/80 leading-relaxed">
-              Teachy processes YouTube videos which are owned by their respective creators. We do not
+              QuizTube processes YouTube videos which are owned by their respective creators. We do not
               claim ownership of video content. Our Service helps you learn from publicly available
               videos in compliance with YouTube's Terms of Service.
             </p>
@@ -110,8 +112,8 @@ export default function Terms() {
             <h2 className="font-heading text-xl font-bold mb-3">10. Contact Us</h2>
             <p className="text-text/80 leading-relaxed">
               If you have questions about these Terms of Service, please contact us at{' '}
-              <a href="mailto:support@teachy.app" className="text-primary hover:underline">
-                support@teachy.app
+              <a href="mailto:support@quiztube.app" className="text-primary hover:underline">
+                support@quiztube.app
               </a>
             </p>
           </section>

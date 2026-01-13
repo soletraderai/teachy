@@ -16,6 +16,7 @@ import {
   useCreateGoal,
   useUpdateGoal,
   useDeleteGoal,
+  useDocumentTitle,
   type Goal,
   type GoalSuggestion,
   type GoalStatus,
@@ -66,6 +67,7 @@ const GOAL_TYPE_INFO = {
 };
 
 export default function Goals() {
+  useDocumentTitle('Goals');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);

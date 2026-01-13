@@ -4,6 +4,7 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import { useAuthStore } from '../stores/authStore';
 import { useSettingsStore } from '../stores/settingsStore';
+import { useDocumentTitle } from '../hooks';
 import type { TutorPersonality, LearningStyle } from '../types';
 
 type OnboardingStep = 'welcome' | 'learning-style' | 'personality' | 'language-variant' | 'commitment' | 'complete';
@@ -173,6 +174,7 @@ const clearOnboardingProgress = () => {
 };
 
 export default function Onboarding() {
+  useDocumentTitle('Get Started');
   const navigate = useNavigate();
   const { user, setUser } = useAuthStore();
   const { settings, setSettings } = useSettingsStore();

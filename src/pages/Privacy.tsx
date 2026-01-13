@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
 import Card from '../components/ui/Card';
+import { useDocumentTitle } from '../hooks';
 
 export default function Privacy() {
+  useDocumentTitle('Privacy Policy');
   return (
     <div className="max-w-4xl mx-auto">
       <Card className="p-8">
@@ -127,8 +129,8 @@ export default function Privacy() {
             <h2 className="font-heading text-xl font-bold mb-3">11. Contact Us</h2>
             <p className="text-text/80 leading-relaxed">
               If you have questions about this Privacy Policy or your data, please contact us at{' '}
-              <a href="mailto:privacy@teachy.app" className="text-primary hover:underline">
-                privacy@teachy.app
+              <a href="mailto:privacy@quiztube.app" className="text-primary hover:underline">
+                privacy@quiztube.app
               </a>
             </p>
           </section>

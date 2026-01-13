@@ -6,8 +6,10 @@ import Card from '../components/ui/Card';
 import Toast from '../components/ui/Toast';
 import { useAuthStore, authApi } from '../stores/authStore';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { useDocumentTitle } from '../hooks';
 
 export default function Signup() {
+  useDocumentTitle('Sign Up');
   const navigate = useNavigate();
   const { setUser, setAccessToken, setLoading, isLoading } = useAuthStore();
 
@@ -119,7 +121,7 @@ export default function Signup() {
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
             <h1 className="font-heading text-4xl font-bold text-text">
-              Teachy
+              QuizTube
             </h1>
           </Link>
           <p className="mt-2 text-text/70 font-body">

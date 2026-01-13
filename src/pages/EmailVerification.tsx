@@ -4,8 +4,10 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Toast from '../components/ui/Toast';
 import { useAuthStore, authApi } from '../stores/authStore';
+import { useDocumentTitle } from '../hooks';
 
 export default function EmailVerification() {
+  useDocumentTitle('Email Verification');
   const navigate = useNavigate();
   const { token } = useParams<{ token: string }>();
   const { user, setUser } = useAuthStore();
@@ -58,7 +60,7 @@ export default function EmailVerification() {
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
             <h1 className="font-heading text-4xl font-bold text-text">
-              Teachy
+              QuizTube
             </h1>
           </Link>
           <p className="mt-2 text-text/70 font-body">

@@ -1,7 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { useActiveTimedSession } from '../hooks';
+import { useActiveTimedSession, useDocumentTitle } from '../hooks';
 import type { TimedSessionType, TimedSessionStatus } from '../types';
 
 // Session type labels
@@ -75,6 +75,7 @@ function getPerformanceMessage(accuracy: number, status: TimedSessionStatus): { 
 }
 
 export default function TimedSessionResults() {
+  useDocumentTitle('Session Results');
   const { sessionId } = useParams<{ sessionId: string }>();
   const { data: session, isLoading, error } = useActiveTimedSession(sessionId);
 

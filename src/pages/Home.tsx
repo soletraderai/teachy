@@ -9,10 +9,11 @@ import { useSettingsStore } from '../stores/settingsStore';
 import { useSessionStore } from '../stores/sessionStore';
 import { createSession } from '../services/session';
 import { RateLimitError } from '../services/gemini';
-import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { useOnlineStatus, useDocumentTitle } from '../hooks';
 import type { ProcessingState } from '../types';
 
 export default function Home() {
+  useDocumentTitle('Home');
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);

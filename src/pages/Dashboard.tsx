@@ -5,7 +5,7 @@ import ProgressBar from '../components/ui/ProgressBar';
 import StaggeredList, { StaggeredItem } from '../components/ui/StaggeredList';
 import { useAuthStore } from '../stores/authStore';
 import { useSessionStore } from '../stores/sessionStore';
-import { useCommitment, useLearningInsights } from '../hooks';
+import { useCommitment, useLearningInsights, useDocumentTitle } from '../hooks';
 
 type ChartView = 'week' | 'month';
 
@@ -17,6 +17,7 @@ interface DayActivity {
 }
 
 export default function Dashboard() {
+  useDocumentTitle('Dashboard');
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { library } = useSessionStore();

@@ -5,7 +5,7 @@ import Button from '../components/ui/Button';
 import Toast from '../components/ui/Toast';
 import ProgressBar from '../components/ui/ProgressBar';
 import { useAuthStore } from '../stores/authStore';
-import { useActiveTimedSession, useUpdateTimedSession } from '../hooks';
+import { useActiveTimedSession, useUpdateTimedSession, useDocumentTitle } from '../hooks';
 import type { TimedSessionType } from '../types';
 
 const API_BASE = 'http://localhost:3001/api';
@@ -37,6 +37,7 @@ interface LocalQuestion {
 }
 
 export default function TimedSessionActive() {
+  useDocumentTitle('Timed Session');
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const { accessToken } = useAuthStore();

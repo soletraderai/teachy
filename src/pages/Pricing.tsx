@@ -4,6 +4,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Toast from '../components/ui/Toast';
 import { useAuthStore } from '../stores/authStore';
+import { useDocumentTitle } from '../hooks';
 
 const pricingPlans = {
   free: {
@@ -44,6 +45,7 @@ const pricingPlans = {
 };
 
 export default function Pricing() {
+  useDocumentTitle('Pricing');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -329,7 +331,7 @@ export default function Pricing() {
               Do you offer team or education discounts?
             </h3>
             <p className="text-text/70">
-              Yes! Contact us at support@teachy.app for special pricing for teams and
+              Yes! Contact us at support@quiztube.app for special pricing for teams and
               educational institutions.
             </p>
           </Card>

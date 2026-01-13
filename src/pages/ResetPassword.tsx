@@ -5,8 +5,10 @@ import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
 import Toast from '../components/ui/Toast';
 import { authApi } from '../stores/authStore';
+import { useDocumentTitle } from '../hooks';
 
 export default function ResetPassword() {
+  useDocumentTitle('Reset Password');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
@@ -86,7 +88,7 @@ export default function ResetPassword() {
           <div className="text-center mb-8">
             <Link to="/" className="inline-block">
               <h1 className="font-heading text-4xl font-bold text-text">
-                Teachy
+                QuizTube
               </h1>
             </Link>
           </div>
@@ -131,7 +133,7 @@ export default function ResetPassword() {
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
             <h1 className="font-heading text-4xl font-bold text-text">
-              Teachy
+              QuizTube
             </h1>
           </Link>
           <p className="mt-2 text-text/70 font-body">

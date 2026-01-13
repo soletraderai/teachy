@@ -6,6 +6,7 @@ import Toast from '../components/ui/Toast';
 import { FeedChannelSkeleton } from '../components/ui/Skeleton';
 import { StaggeredItem } from '../components/ui/StaggeredList';
 import { useAuthStore } from '../stores/authStore';
+import { useDocumentTitle } from '../hooks';
 
 interface FollowedChannel {
   id: string;
@@ -42,6 +43,7 @@ interface SearchResult {
 const API_BASE = 'http://localhost:3001/api';
 
 export default function Feed() {
+  useDocumentTitle('Your Feed');
   const [feedData, setFeedData] = useState<FeedData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

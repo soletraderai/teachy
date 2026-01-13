@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { useAuthStore } from '../stores/authStore';
-import { useTimedSessionHistory } from '../hooks';
+import { useTimedSessionHistory, useDocumentTitle } from '../hooks';
 import type { TimedSessionType, TimedSession } from '../types';
 
 // Session type labels
@@ -61,6 +61,7 @@ type FilterType = 'all' | TimedSessionType;
 type SortType = 'date' | 'accuracy' | 'time';
 
 export default function TimedSessionHistory() {
+  useDocumentTitle('Session History');
   const { user, isAuthenticated } = useAuthStore();
   const isPro = isAuthenticated() && user?.tier === 'PRO';
 

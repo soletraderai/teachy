@@ -4,6 +4,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Toast from '../components/ui/Toast';
 import { useAuthStore } from '../stores/authStore';
+import { useDocumentTitle } from '../hooks';
 
 const API_BASE = 'http://localhost:3001/api';
 
@@ -48,6 +49,7 @@ interface RenderNode extends MapNode {
 }
 
 export default function KnowledgeMap() {
+  useDocumentTitle('Knowledge Map');
   const { user, isAuthenticated } = useAuthStore();
   const isPro = isAuthenticated() && user?.tier === 'PRO';
 

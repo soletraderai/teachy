@@ -9,6 +9,7 @@ import CodeEditor from '../components/ui/CodeEditor';
 import CodePlayground from '../components/ui/CodePlayground';
 import { useSessionStore } from '../stores/sessionStore';
 import { evaluateAnswer, RateLimitError, generateFallbackFeedback } from '../services/gemini';
+import { useDocumentTitle } from '../hooks';
 import type { ChatMessage } from '../types';
 
 type SessionPhase = 'question' | 'feedback' | 'summary';
@@ -113,6 +114,7 @@ function calculateOptimalDifficulty(
 }
 
 export default function ActiveSession() {
+  useDocumentTitle('Learning Session');
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const {

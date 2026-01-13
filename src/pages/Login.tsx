@@ -8,8 +8,10 @@ import MigrationPrompt from '../components/ui/MigrationPrompt';
 import { useAuthStore, authApi } from '../stores/authStore';
 import { useSessionStore } from '../stores/sessionStore';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { useDocumentTitle } from '../hooks';
 
 export default function Login() {
+  useDocumentTitle('Sign In');
   const navigate = useNavigate();
   const { setUser, setAccessToken, setLoading, isLoading } = useAuthStore();
   const { getLocalSessionCount, migrateLocalSessions, dismissMigration, migrationDismissed } = useSessionStore();
@@ -134,7 +136,7 @@ export default function Login() {
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
             <h1 className="font-heading text-4xl font-bold text-text">
-              Teachy
+              QuizTube
             </h1>
           </Link>
           <p className="mt-2 text-text/70 font-body">

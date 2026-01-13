@@ -1,8 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
+import { useDocumentTitle } from '../hooks';
 
 export default function NotFound() {
+  useDocumentTitle('404 Not Found');
   const navigate = useNavigate();
 
   return (

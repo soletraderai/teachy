@@ -10,6 +10,7 @@ import AnimatedNumber from '../components/ui/AnimatedNumber';
 import CommitmentCalendar from '../components/ui/CommitmentCalendar';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useAuthStore, authApi } from '../stores/authStore';
+import { useDocumentTitle } from '../hooks';
 import type { TutorPersonality } from '../types';
 
 interface LearningModelData {
@@ -131,6 +132,7 @@ const learningStyleOptions = [
 ];
 
 export default function Settings() {
+  useDocumentTitle('Settings');
   const navigate = useNavigate();
   const { settings, setSettings } = useSettingsStore();
   const { user, isAuthenticated } = useAuthStore();
@@ -726,7 +728,7 @@ export default function Settings() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `teachy-data-export-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `quiztube-data-export-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

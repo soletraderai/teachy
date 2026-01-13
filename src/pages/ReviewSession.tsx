@@ -6,6 +6,7 @@ import ProgressBar from '../components/ui/ProgressBar';
 import Toast from '../components/ui/Toast';
 import { api } from '../services/api';
 import { useAuthStore } from '../stores/authStore';
+import { useDocumentTitle } from '../hooks';
 
 interface ReviewItem {
   topicId: string;
@@ -51,6 +52,7 @@ function detectFeedbackType(feedback: string): FeedbackType {
 }
 
 export default function ReviewSession() {
+  useDocumentTitle('Review Session');
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
   const [loading, setLoading] = useState(true);

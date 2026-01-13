@@ -175,7 +175,7 @@ export default function Layout() {
               to="/"
               className="font-heading font-bold text-xl sm:text-2xl text-text hover:text-primary transition-colors"
             >
-              YouTube Learning
+              QuizTube
             </Link>
 
             {/* Desktop Navigation */}
@@ -337,7 +337,7 @@ export default function Layout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
             <p className="text-sm text-text/70 font-body">
-              YouTube Learning Tool - Transform videos into active learning
+              QuizTube - Transform videos into active learning
             </p>
             <div className="flex items-center gap-4 text-sm text-text/60 font-body">
               <Link to="/terms" className="hover:text-text transition-colors">Terms</Link>
