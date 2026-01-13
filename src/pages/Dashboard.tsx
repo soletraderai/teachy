@@ -312,6 +312,32 @@ export default function Dashboard() {
           .sort((a, b) => b.lastSessionDate - a.lastSessionDate)
           .slice(0, 3); // Show max 3 series
 
+        // Show empty state for new users with no sessions
+        if (library.sessions.length === 0) {
+          return (
+            <Card>
+              <div className="space-y-4 text-center py-6">
+                <span className="material-icons text-6xl text-text/30" aria-hidden="true">
+                  play_circle_outline
+                </span>
+                <h2 className="font-heading text-xl font-bold text-text">
+                  Start Your Learning Journey
+                </h2>
+                <p className="text-text/70 max-w-md mx-auto">
+                  Complete your first learning session to unlock personalized recommendations based on your interests.
+                </p>
+                <button
+                  onClick={() => navigate('/')}
+                  className="mt-4 px-6 py-3 font-heading font-bold bg-primary border-3 border-border shadow-brutal hover:shadow-brutal-hover transition-all"
+                >
+                  Start First Session
+                </button>
+              </div>
+            </Card>
+          );
+        }
+
+        // Don't show section if no series recommendations yet
         if (seriesChannels.length === 0) return null;
 
         return (
