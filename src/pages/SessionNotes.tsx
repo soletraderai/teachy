@@ -145,7 +145,7 @@ export default function SessionNotes() {
         title: 'Continue This Session',
         description: `You still have ${session.topics.filter(t => !t.completed && !t.skipped).length} topic(s) to complete in this session.`,
         action: 'continue',
-        link: `/session/${session.id}`,
+        link: `/session/${session.id}/active`,
         buttonText: 'Continue Learning'
       });
     }
