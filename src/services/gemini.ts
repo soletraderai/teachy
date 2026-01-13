@@ -95,14 +95,206 @@ function createQuestion(text: string): Question {
   };
 }
 
+// Detect programming language from video title
+function detectProgrammingLanguage(title: string): string | null {
+  const langPatterns: Record<string, RegExp> = {
+    'javascript': /\b(javascript|js|node\.?js|nodejs)\b/i,
+    'typescript': /\b(typescript|ts)\b/i,
+    'python': /\b(python|py)\b/i,
+    'react': /\b(react|jsx)\b/i,
+    'java': /\bjava\b/i,
+    'csharp': /\b(c#|csharp|\.net)\b/i,
+    'cpp': /\b(c\+\+|cpp)\b/i,
+    'rust': /\brust\b/i,
+    'go': /\bgolang|go\b/i,
+    'ruby': /\bruby\b/i,
+    'php': /\bphp\b/i,
+    'html': /\bhtml\b/i,
+    'css': /\bcss\b/i,
+    'sql': /\bsql\b/i,
+  };
+
+  for (const [lang, pattern] of Object.entries(langPatterns)) {
+    if (pattern.test(title)) {
+      return lang === 'react' ? 'javascript' : lang;
+    }
+  }
+
+  // Check for generic programming keywords
+  if (/\b(programming|coding|developer|software|code|tutorial|beginner|learn)\b/i.test(title)) {
+    return 'javascript'; // Default to javascript for generic programming tutorials
+  }
+
+  return null;
+}
+
+// Generate sample code examples for different programming topics
+function generateCodeExample(topicTitle: string, language: string): { codeExample: string; codeLanguage: string } | null {
+  const lowerTitle = topicTitle.toLowerCase();
+
+  if (language === 'javascript' || language === 'typescript') {
+    if (lowerTitle.includes('function') || lowerTitle.includes('fundamental')) {
+      return {
+        codeExample: `// Example: A simple function
+function greet(name) {
+  return \`Hello, \${name}!\`;
+}
+
+// Call the function
+console.log(greet("World"));
+// Output: Hello, World!`,
+        codeLanguage: language,
+      };
+    }
+    if (lowerTitle.includes('variable') || lowerTitle.includes('data type')) {
+      return {
+        codeExample: `// Variables in JavaScript
+const name = "Alice";      // String
+let age = 25;              // Number
+let isStudent = true;      // Boolean
+let hobbies = ["reading"]; // Array
+
+console.log(name, age, isStudent);`,
+        codeLanguage: language,
+      };
+    }
+    if (lowerTitle.includes('array') || lowerTitle.includes('loop')) {
+      return {
+        codeExample: `// Array methods example
+const numbers = [1, 2, 3, 4, 5];
+
+// Map: transform each element
+const doubled = numbers.map(n => n * 2);
+console.log(doubled); // [2, 4, 6, 8, 10]
+
+// Filter: keep only elements that pass test
+const evens = numbers.filter(n => n % 2 === 0);
+console.log(evens); // [2, 4]`,
+        codeLanguage: language,
+      };
+    }
+    if (lowerTitle.includes('object') || lowerTitle.includes('class')) {
+      return {
+        codeExample: `// Object-oriented example
+class Person {
+  constructor(name, age) {
+    this.name = name;
+    this.age = age;
+  }
+
+  greet() {
+    return \`Hi, I'm \${this.name}\`;
+  }
+}
+
+const person = new Person("Alice", 25);
+console.log(person.greet());`,
+        codeLanguage: language,
+      };
+    }
+    if (lowerTitle.includes('async') || lowerTitle.includes('promise')) {
+      return {
+        codeExample: `// Async/Await example
+async function fetchData(url) {
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+// Usage
+fetchData('https://api.example.com/data')
+  .then(data => console.log(data));`,
+        codeLanguage: language,
+      };
+    }
+  }
+
+  if (language === 'python') {
+    if (lowerTitle.includes('function') || lowerTitle.includes('fundamental')) {
+      return {
+        codeExample: `# Example: A simple function
+def greet(name):
+    return f"Hello, {name}!"
+
+# Call the function
+print(greet("World"))
+# Output: Hello, World!`,
+        codeLanguage: 'python',
+      };
+    }
+    if (lowerTitle.includes('class') || lowerTitle.includes('object')) {
+      return {
+        codeExample: `# Object-oriented example
+class Person:
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+
+    def greet(self):
+        return f"Hi, I'm {self.name}"
+
+person = Person("Alice", 25)
+print(person.greet())`,
+        codeLanguage: 'python',
+      };
+    }
+  }
+
+  // Default code example for core fundamentals
+  if (lowerTitle.includes('core') || lowerTitle.includes('introduction') || lowerTitle.includes('beginner')) {
+    if (language === 'python') {
+      return {
+        codeExample: `# Python basics
+name = "Learner"
+print(f"Welcome, {name}!")
+
+# A simple list
+numbers = [1, 2, 3, 4, 5]
+total = sum(numbers)
+print(f"Sum: {total}")`,
+        codeLanguage: 'python',
+      };
+    }
+    return {
+      codeExample: `// JavaScript basics
+const name = "Learner";
+console.log(\`Welcome, \${name}!\`);
+
+// A simple array
+const numbers = [1, 2, 3, 4, 5];
+const total = numbers.reduce((a, b) => a + b, 0);
+console.log(\`Sum: \${total}\`);`,
+      codeLanguage: language || 'javascript',
+    };
+  }
+
+  return null;
+}
+
 // Generate fallback topics based on video metadata (used when API is unavailable)
 function generateFallbackTopics(metadata: VideoMetadata): { topics: Topic[]; estimatedDuration: number } {
   const videoTitle = metadata.title;
   const isLongVideo = isLongVideoFromTitle(videoTitle);
+  const detectedLanguage = detectProgrammingLanguage(videoTitle);
+
+  // Helper to add code example to topic if programming tutorial
+  const addCodeExample = (topic: Topic, topicTitle: string): Topic => {
+    if (detectedLanguage) {
+      const codeEx = generateCodeExample(topicTitle, detectedLanguage);
+      if (codeEx) {
+        return { ...topic, codeExample: codeEx.codeExample, codeLanguage: codeEx.codeLanguage };
+      }
+    }
+    return topic;
+  };
 
   // For long videos/courses, generate more comprehensive topics (5-7 topics, 2-3 questions each = 12-21 questions)
   if (isLongVideo) {
-    const topics: Topic[] = [
+    const rawTopics: Topic[] = [
       {
         id: generateId(),
         title: `Introduction and Overview`,
@@ -196,6 +388,9 @@ function generateFallbackTopics(metadata: VideoMetadata): { topics: Topic[]; est
       },
     ];
 
+    // Apply code examples to each topic for programming tutorials
+    const topics = rawTopics.map(t => addCodeExample(t, t.title));
+
     return {
       topics,
       estimatedDuration: 45, // Longer estimated duration for comprehensive courses
@@ -203,7 +398,7 @@ function generateFallbackTopics(metadata: VideoMetadata): { topics: Topic[]; est
   }
 
   // Standard fallback for shorter videos (3 topics, 2 questions each = 6 questions)
-  const topics: Topic[] = [
+  const rawTopics: Topic[] = [
     {
       id: generateId(),
       title: `Introduction to ${videoTitle}`,
@@ -245,6 +440,9 @@ function generateFallbackTopics(metadata: VideoMetadata): { topics: Topic[]; est
     },
   ];
 
+  // Apply code examples to each topic for programming tutorials
+  const topics = rawTopics.map(t => addCodeExample(t, t.title));
+
   return {
     topics,
     estimatedDuration: 10,
@@ -256,6 +454,19 @@ export async function generateTopicsFromVideo(
   metadata: VideoMetadata,
   transcript?: string
 ): Promise<{ topics: Topic[]; estimatedDuration: number }> {
+  // Detect if this is a programming/coding tutorial
+  const isProgrammingTutorial = /\b(programming|coding|javascript|typescript|python|react|node|java|c\+\+|c#|rust|go|ruby|php|html|css|sql|api|backend|frontend|web dev|software|developer|code|tutorial)\b/i.test(metadata.title);
+
+  const codeExampleInstructions = isProgrammingTutorial ? `
+4. For programming topics, include a "codeExample" field with a working code snippet that demonstrates the concept (5-15 lines)
+5. For programming topics, include a "codeLanguage" field (e.g., "javascript", "python", "typescript", "java")
+
+If a topic is not about coding, omit the codeExample and codeLanguage fields.` : '';
+
+  const codeExampleFormat = isProgrammingTutorial ? `,
+      "codeExample": "// Example code here (optional, only for programming topics)",
+      "codeLanguage": "javascript"` : '';
+
   const prompt = transcript
     ? `Analyze this YouTube video transcript and create an educational learning session:
 
@@ -268,7 +479,7 @@ ${transcript.slice(0, 15000)} ${transcript.length > 15000 ? '... (truncated)' : 
 Based on the video content, please:
 1. Identify 3-5 main topics covered in the video
 2. For each topic, provide a concise summary (2-3 sentences)
-3. Generate 2-3 questions per topic that test understanding
+3. Generate 2-3 questions per topic that test understanding${codeExampleInstructions}
 
 Format your response as JSON with this exact structure:
 {
@@ -279,7 +490,7 @@ Format your response as JSON with this exact structure:
       "questions": [
         "Question 1 text",
         "Question 2 text"
-      ]
+      ]${codeExampleFormat}
     }
   ],
   "estimatedDuration": 15
@@ -295,7 +506,7 @@ URL: ${metadata.url}
 Based on the video title and likely content, please:
 1. Identify 3-5 main topics this video probably covers
 2. For each topic, provide an educational summary (2-3 sentences)
-3. Generate 2-3 questions per topic that would help test understanding
+3. Generate 2-3 questions per topic that would help test understanding${codeExampleInstructions}
 
 Format your response as JSON with this exact structure:
 {
@@ -306,7 +517,7 @@ Format your response as JSON with this exact structure:
       "questions": [
         "Question 1 text",
         "Question 2 text"
-      ]
+      ]${codeExampleFormat}
     }
   ],
   "estimatedDuration": 15
@@ -320,7 +531,7 @@ The estimatedDuration should be in minutes. Make questions thought-provoking and
     const data = JSON.parse(jsonStr);
 
     // Transform to proper Topic format
-    const topics: Topic[] = data.topics.map((t: { title: string; summary: string; questions: string[] }) => ({
+    const topics: Topic[] = data.topics.map((t: { title: string; summary: string; questions: string[]; codeExample?: string; codeLanguage?: string }) => ({
       id: generateId(),
       title: t.title,
       summary: t.summary,
@@ -336,6 +547,9 @@ The estimatedDuration should be in minutes. Make questions thought-provoking and
       bookmarked: false,
       skipped: false,
       completed: false,
+      // Include code examples if present (for programming topics)
+      ...(t.codeExample && { codeExample: t.codeExample }),
+      ...(t.codeLanguage && { codeLanguage: t.codeLanguage }),
     }));
 
     return {
