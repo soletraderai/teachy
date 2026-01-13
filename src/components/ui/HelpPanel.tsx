@@ -3,6 +3,43 @@ import { createPortal } from 'react-dom';
 import MaterialIcon from './MaterialIcon';
 import Button from './Button';
 
+// Simple analytics tracking for help panel usage
+interface HelpPanelEvent {
+  timestamp: number;
+  context: string;
+  questionId?: string;
+  sessionId?: string;
+  action: 'open' | 'close' | 'section_view';
+  sectionId?: string;
+}
+
+const ANALYTICS_KEY = 'quiztube_help_analytics';
+
+function trackHelpPanelEvent(event: Omit<HelpPanelEvent, 'timestamp'>) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(ANALYTICS_KEY) || '[]') as HelpPanelEvent[];
+    const newEvent: HelpPanelEvent = {
+      ...event,
+      timestamp: Date.now(),
+    };
+    // Keep only last 100 events to prevent storage bloat
+    const updated = [...existing.slice(-99), newEvent];
+    localStorage.setItem(ANALYTICS_KEY, JSON.stringify(updated));
+    console.log('[Analytics] Help panel event:', newEvent);
+  } catch (error) {
+    console.warn('Failed to track help panel event:', error);
+  }
+}
+
+// Export for external access to analytics data
+export function getHelpPanelAnalytics(): HelpPanelEvent[] {
+  try {
+    return JSON.parse(localStorage.getItem(ANALYTICS_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
 interface HelpSection {
   id: string;
   title: string;
@@ -19,6 +56,10 @@ interface HelpPanelProps {
   sessionNotes?: HelpSection[];
   /** Video timestamp callback (for session context) */
   onTimestampClick?: (timestamp: string) => void;
+  /** Question ID for tracking (analytics) */
+  questionId?: string;
+  /** Session ID for tracking (analytics) */
+  sessionId?: string;
 }
 
 // Default help content by context
@@ -106,9 +147,12 @@ export default function HelpPanel({
   context = 'default',
   sessionNotes,
   onTimestampClick,
+  questionId,
+  sessionId,
 }: HelpPanelProps) {
   const [isMobile, setIsMobile] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const hasTrackedOpen = useRef(false);
 
   // Check for mobile viewport
   useEffect(() => {
@@ -117,6 +161,27 @@ export default function HelpPanel({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Track help panel open/close events
+  useEffect(() => {
+    if (isOpen && !hasTrackedOpen.current) {
+      trackHelpPanelEvent({
+        action: 'open',
+        context,
+        questionId,
+        sessionId,
+      });
+      hasTrackedOpen.current = true;
+    } else if (!isOpen && hasTrackedOpen.current) {
+      trackHelpPanelEvent({
+        action: 'close',
+        context,
+        questionId,
+        sessionId,
+      });
+      hasTrackedOpen.current = false;
+    }
+  }, [isOpen, context, questionId, sessionId]);
 
   // Close on escape key
   useEffect(() => {

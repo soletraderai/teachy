@@ -5,6 +5,67 @@
 import { useState, useRef, forwardRef, useImperativeHandle } from 'react';
 import MaterialIcon from './MaterialIcon';
 
+// Search analytics tracking
+interface SearchLogEvent {
+  timestamp: number;
+  query: string;
+  resultsCount?: number;
+  selectedResultId?: string;
+  selectedResultTitle?: string;
+}
+
+const SEARCH_LOGS_KEY = 'quiztube_search_logs';
+
+export function logSearchQuery(query: string, resultsCount?: number): void {
+  try {
+    const existing = JSON.parse(localStorage.getItem(SEARCH_LOGS_KEY) || '[]') as SearchLogEvent[];
+    const newEvent: SearchLogEvent = {
+      timestamp: Date.now(),
+      query,
+      resultsCount,
+    };
+    // Keep only last 100 search logs
+    const updated = [...existing.slice(-99), newEvent];
+    localStorage.setItem(SEARCH_LOGS_KEY, JSON.stringify(updated));
+    console.log('[Analytics] Search query logged:', newEvent);
+  } catch (error) {
+    console.warn('Failed to log search query:', error);
+  }
+}
+
+export function logSearchSelection(query: string, resultId: string, resultTitle?: string): void {
+  try {
+    const existing = JSON.parse(localStorage.getItem(SEARCH_LOGS_KEY) || '[]') as SearchLogEvent[];
+    // Find the most recent search with this query and update it
+    const lastIndex = existing.findLastIndex(e => e.query === query && !e.selectedResultId);
+    if (lastIndex >= 0) {
+      existing[lastIndex].selectedResultId = resultId;
+      existing[lastIndex].selectedResultTitle = resultTitle;
+    } else {
+      // Create a new entry if we couldn't find the original query
+      existing.push({
+        timestamp: Date.now(),
+        query,
+        selectedResultId: resultId,
+        selectedResultTitle: resultTitle,
+      });
+    }
+    const updated = existing.slice(-100);
+    localStorage.setItem(SEARCH_LOGS_KEY, JSON.stringify(updated));
+    console.log('[Analytics] Search selection logged:', { query, resultId, resultTitle });
+  } catch (error) {
+    console.warn('Failed to log search selection:', error);
+  }
+}
+
+export function getSearchLogs(): SearchLogEvent[] {
+  try {
+    return JSON.parse(localStorage.getItem(SEARCH_LOGS_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
 export interface SearchInputProps {
   /** Current search value */
   value?: string;

@@ -7,6 +7,7 @@ import { StaggeredItem } from '../components/ui/StaggeredList';
 import { useSessionStore } from '../stores/sessionStore';
 import { useAuthStore } from '../stores/authStore';
 import { useDebounce, useDocumentTitle } from '../hooks';
+import { logSearchQuery, logSearchSelection } from '../components/ui/SearchInput';
 
 const ITEMS_PER_PAGE = 6; // 6 items for a 3-column grid layout
 
@@ -159,6 +160,10 @@ export default function Library() {
     if (debouncedSearch !== currentSearchParam) {
       updateParams(debouncedSearch);
     }
+    // Log search query for analytics
+    if (debouncedSearch.trim()) {
+      logSearchQuery(debouncedSearch, filteredSessions.length);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch]);
 
@@ -213,6 +218,15 @@ export default function Library() {
   };
 
   const hasActiveFilters = search.trim() || filterBookmarked || sortOrder !== 'newest' || dateFrom || dateTo;
+
+  // Handle session selection with analytics logging
+  const handleSessionClick = (sessionId: string, sessionTitle: string) => {
+    // Log selection if there was an active search
+    if (debouncedSearch.trim()) {
+      logSearchSelection(debouncedSearch, sessionId, sessionTitle);
+    }
+    navigate(`/session/${sessionId}/notes`);
+  };
 
   return (
     <div className="space-y-6">
@@ -345,7 +359,7 @@ export default function Library() {
             <Card
               hoverable
               className="h-full"
-              onClick={() => navigate(`/session/${session.id}/notes`)}
+              onClick={() => handleSessionClick(session.id, session.video.title)}
             >
               {/* Thumbnail */}
               {session.video.thumbnailUrl && (

@@ -888,6 +888,39 @@ export async function checkAIServiceAvailable(): Promise<boolean> {
   }
 }
 
+// Helper for retry logic with timeout
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  timeoutMs: number = 10000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      // Create a timeout promise
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), timeoutMs);
+      });
+
+      // Race between the actual function and timeout
+      const result = await Promise.race([fn(), timeoutPromise]);
+      return result;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.warn(`Attempt ${attempt}/${maxRetries} failed:`, lastError.message);
+
+      // Don't retry on the last attempt
+      if (attempt < maxRetries) {
+        // Wait a bit before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+      }
+    }
+  }
+
+  throw lastError || new Error('All retry attempts failed');
+}
+
 // Generate structured notes from video transcript
 export async function generateStructuredNotes(
   videoTitle: string,
@@ -948,7 +981,12 @@ Return JSON in this exact format:
 Focus on educational value and key takeaways. Be specific and actionable.`;
 
   try {
-    const response = await callGemini(prompt);
+    // Use retry logic with 10 second timeout per attempt, up to 3 retries
+    const response = await withRetry(
+      () => callGemini(prompt),
+      3,  // maxRetries
+      10000  // timeoutMs (10 seconds)
+    );
     const jsonStr = extractJson(response);
     const parsed = JSON.parse(jsonStr);
 
