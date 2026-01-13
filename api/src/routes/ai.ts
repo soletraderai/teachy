@@ -305,4 +305,67 @@ Provide a helpful, educational response.`;
   }
 });
 
+// POST /api/ai/evaluate-timed-answer - Quick evaluation for timed sessions
+router.post('/evaluate-timed-answer', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const rateLimit = await aiRateLimit(req.user!.id, req.user!.tier);
+    if (!rateLimit.allowed) {
+      // For timed sessions, provide a fallback instead of erroring
+      return res.json({
+        isCorrect: false,
+        feedback: 'Your answer has been recorded. Review this topic later for detailed feedback.',
+      });
+    }
+
+    const { questionId, topicName, questionText, userAnswer } = req.body;
+
+    // If answer is too short, mark as incorrect
+    if (!userAnswer || userAnswer.trim().length < 10) {
+      return res.json({
+        isCorrect: false,
+        feedback: 'Your answer was too brief. Try to provide more detail in your responses.',
+      });
+    }
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+
+    const prompt = `You are a quick answer evaluator for a timed learning session.
+
+Topic: ${topicName}
+Question: ${questionText}
+User's Answer: ${userAnswer}
+
+Evaluate if the answer demonstrates understanding of the concept. Be encouraging but honest.
+Respond with a brief evaluation (2-3 sentences max).
+
+Return JSON:
+{
+  "isCorrect": true or false (true if answer shows understanding, false if incorrect or missing key concepts),
+  "feedback": "Brief encouraging feedback"
+}`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      // Fallback: give credit for attempting
+      return res.json({
+        isCorrect: true,
+        feedback: 'Good attempt! Your answer has been recorded.',
+      });
+    }
+
+    res.json(JSON.parse(jsonMatch[0]));
+  } catch (error) {
+    // Fallback on error
+    console.error('Failed to evaluate timed answer:', error);
+    res.json({
+      isCorrect: false,
+      feedback: 'Your answer has been recorded. Review this topic later for detailed feedback.',
+    });
+  }
+});
+
 export default router;

@@ -22,6 +22,10 @@ import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import ReviewSession from './pages/ReviewSession';
 import KnowledgeMap from './pages/KnowledgeMap';
+import TimedSessions from './pages/TimedSessions';
+import TimedSessionActive from './pages/TimedSessionActive';
+import TimedSessionResults from './pages/TimedSessionResults';
+import TimedSessionHistory from './pages/TimedSessionHistory';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import AuthCallback from './pages/AuthCallback';
@@ -51,6 +55,10 @@ function App() {
             <Route path="goals" element={<Goals />} />
             <Route path="review" element={<ReviewSession />} />
             <Route path="knowledge-map" element={<KnowledgeMap />} />
+            <Route path="timed-sessions" element={<TimedSessions />} />
+            <Route path="timed-sessions/history" element={<TimedSessionHistory />} />
+            <Route path="timed-sessions/:sessionId/active" element={<TimedSessionActive />} />
+            <Route path="timed-sessions/:sessionId/results" element={<TimedSessionResults />} />
             <Route path="session/:sessionId/overview" element={<SessionOverview />} />
             <Route path="session/:sessionId/active" element={<ActiveSession />} />
             <Route path="session/:sessionId/notes" element={<SessionNotes />} />

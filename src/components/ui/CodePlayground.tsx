@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback, Component, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import CodeEditor from './CodeEditor';
 import { useAuthStore } from '../../stores/authStore';
@@ -16,190 +16,205 @@ interface ExecutionResult {
   executionTime: number;
 }
 
-// Pyodide types
-interface PyodideInterface {
-  runPython: (code: string) => unknown;
-  runPythonAsync: (code: string) => Promise<unknown>;
-  loadPackage: (name: string | string[]) => Promise<void>;
+// Error Boundary for graceful error handling
+interface ErrorBoundaryProps {
+  children: ReactNode;
+  fallback?: ReactNode;
 }
 
-// Global Pyodide instance
-let pyodideInstance: PyodideInterface | null = null;
-let pyodideLoading = false;
-let pyodideLoadPromise: Promise<PyodideInterface> | null = null;
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
 
-// Load Pyodide on demand
-const loadPyodide = async (): Promise<PyodideInterface> => {
-  if (pyodideInstance) {
-    return pyodideInstance;
+class CodePlaygroundErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
   }
 
-  if (pyodideLoadPromise) {
-    return pyodideLoadPromise;
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
   }
 
-  pyodideLoading = true;
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('CodePlayground error:', error, errorInfo);
+  }
 
-  pyodideLoadPromise = new Promise(async (resolve, reject) => {
-    try {
-      // Load Pyodide script
-      if (!document.querySelector('script[src*="pyodide"]')) {
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js';
-        script.async = true;
-        document.head.appendChild(script);
-
-        await new Promise<void>((res, rej) => {
-          script.onload = () => res();
-          script.onerror = () => rej(new Error('Failed to load Pyodide'));
-        });
-      }
-
-      // Initialize Pyodide
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const pyodide = await (window as any).loadPyodide({
-        indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/',
-      });
-
-      pyodideInstance = pyodide;
-      pyodideLoading = false;
-      resolve(pyodide);
-    } catch (error) {
-      pyodideLoading = false;
-      pyodideLoadPromise = null;
-      reject(error);
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <div className="border-3 border-border bg-gray-900 text-white p-4">
+          <div className="flex items-center gap-2 text-red-400 mb-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span className="font-bold">Code Playground Error</span>
+          </div>
+          <p className="text-gray-400 text-sm mb-3">
+            Something went wrong with the code playground. Please refresh the page.
+          </p>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm border border-gray-600 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      );
     }
-  });
 
-  return pyodideLoadPromise;
-};
+    return this.props.children;
+  }
+}
 
-// Execute Python code using Pyodide
-const executePython = async (code: string): Promise<ExecutionResult> => {
-  const output: string[] = [];
+// Execution timeout in milliseconds (5 seconds)
+const EXECUTION_TIMEOUT = 5000;
+
+// Create the sandboxed iframe HTML content for JavaScript execution
+const createSandboxedRunner = (code: string): string => {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+</head>
+<body>
+<script>
+(function() {
+  'use strict';
+
+  const output = [];
   const startTime = performance.now();
-  let error: string | null = null;
+  let error = null;
 
-  try {
-    const pyodide = await loadPyodide();
-
-    // Redirect stdout to capture print statements
-    pyodide.runPython(`
-import sys
-from io import StringIO
-sys.stdout = StringIO()
-sys.stderr = StringIO()
-    `);
-
-    // Run the user's code
-    let result: unknown;
-    try {
-      result = pyodide.runPython(code);
-    } catch (e) {
-      error = e instanceof Error ? e.message : String(e);
-    }
-
-    // Capture output
-    const stdout = pyodide.runPython('sys.stdout.getvalue()') as string;
-    const stderr = pyodide.runPython('sys.stderr.getvalue()') as string;
-
-    // Reset stdout/stderr
-    pyodide.runPython(`
-sys.stdout = sys.__stdout__
-sys.stderr = sys.__stderr__
-    `);
-
-    if (stdout.trim()) {
-      output.push(...stdout.trim().split('\n'));
-    }
-
-    if (stderr.trim()) {
-      output.push(`[STDERR] ${stderr.trim()}`);
-    }
-
-    if (!error && result !== undefined && result !== null) {
-      const resultStr = String(result);
-      if (resultStr !== 'None') {
-        output.push(`=> ${resultStr}`);
+  // Format values for display
+  function formatValue(value) {
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (typeof value === 'function') return '[Function: ' + (value.name || 'anonymous') + ']';
+    if (value instanceof Error) return value.name + ': ' + value.message;
+    if (Array.isArray(value)) {
+      try {
+        return JSON.stringify(value, null, 2);
+      } catch {
+        return '[Array]';
       }
     }
-  } catch (err) {
-    error = err instanceof Error ? err.message : String(err);
+    if (typeof value === 'object') {
+      try {
+        return JSON.stringify(value, null, 2);
+      } catch {
+        return '[Object]';
+      }
+    }
+    return String(value);
   }
 
-  const executionTime = performance.now() - startTime;
-  return { output, error, executionTime };
-};
-
-// Safely execute JavaScript code and capture output
-const executeJavaScript = (code: string): ExecutionResult => {
-  const output: string[] = [];
-  const startTime = performance.now();
-  let error: string | null = null;
-
-  // Create a mock console
+  // Override console methods
   const mockConsole = {
-    log: (...args: unknown[]) => {
-      output.push(args.map(arg => formatValue(arg)).join(' '));
+    log: function() {
+      const args = Array.from(arguments);
+      output.push(args.map(formatValue).join(' '));
     },
-    error: (...args: unknown[]) => {
-      output.push(`[ERROR] ${args.map(arg => formatValue(arg)).join(' ')}`);
+    error: function() {
+      const args = Array.from(arguments);
+      output.push('[ERROR] ' + args.map(formatValue).join(' '));
     },
-    warn: (...args: unknown[]) => {
-      output.push(`[WARN] ${args.map(arg => formatValue(arg)).join(' ')}`);
+    warn: function() {
+      const args = Array.from(arguments);
+      output.push('[WARN] ' + args.map(formatValue).join(' '));
     },
-    info: (...args: unknown[]) => {
-      output.push(`[INFO] ${args.map(arg => formatValue(arg)).join(' ')}`);
+    info: function() {
+      const args = Array.from(arguments);
+      output.push('[INFO] ' + args.map(formatValue).join(' '));
     },
+    debug: function() {
+      const args = Array.from(arguments);
+      output.push('[DEBUG] ' + args.map(formatValue).join(' '));
+    },
+    table: function(data) {
+      output.push(formatValue(data));
+    },
+    clear: function() {
+      // No-op in sandbox
+    },
+    assert: function(condition) {
+      if (!condition) {
+        const args = Array.from(arguments).slice(1);
+        output.push('[ASSERT FAILED] ' + (args.length > 0 ? args.map(formatValue).join(' ') : 'Assertion failed'));
+      }
+    },
+    count: function() {},
+    countReset: function() {},
+    group: function() {},
+    groupEnd: function() {},
+    groupCollapsed: function() {},
+    time: function() {},
+    timeEnd: function() {},
+    timeLog: function() {},
+    trace: function() {
+      output.push('[TRACE] Stack trace requested');
+    }
   };
 
+  // Replace global console
+  window.console = mockConsole;
+
+  // Block dangerous APIs
+  window.fetch = undefined;
+  window.XMLHttpRequest = undefined;
+  window.WebSocket = undefined;
+  window.Worker = undefined;
+  window.SharedWorker = undefined;
+  window.ServiceWorker = undefined;
+  window.localStorage = undefined;
+  window.sessionStorage = undefined;
+  window.indexedDB = undefined;
+  window.openDatabase = undefined;
+  window.alert = function(msg) { output.push('[ALERT] ' + formatValue(msg)); };
+  window.confirm = function() { return false; };
+  window.prompt = function() { return null; };
+  window.open = undefined;
+  window.close = undefined;
+  window.print = undefined;
+  window.eval = undefined;
+
   try {
-    // Create a safe execution context
-    const safeCode = `
+    // Execute user code
+    const userCode = ${JSON.stringify(code)};
+    const result = (function() {
       'use strict';
-      const console = mockConsole;
-      ${code}
-    `;
+      return eval(userCode);
+    })();
 
-    // Execute with limited capabilities
-    // eslint-disable-next-line no-new-func
-    const fn = new Function('mockConsole', safeCode);
-    const result = fn(mockConsole);
-
-    // If the code returns a value, add it to output
+    // If code returns a value, add to output
     if (result !== undefined) {
-      output.push(`=> ${formatValue(result)}`);
+      output.push('=> ' + formatValue(result));
     }
-  } catch (err) {
-    error = err instanceof Error ? err.message : String(err);
+  } catch (e) {
+    error = e.name + ': ' + e.message;
   }
 
   const executionTime = performance.now() - startTime;
 
-  return { output, error, executionTime };
+  // Send results back to parent
+  parent.postMessage({
+    type: 'execution-result',
+    output: output,
+    error: error,
+    executionTime: executionTime
+  }, '*');
+})();
+</script>
+</body>
+</html>
+`;
 };
 
-// Format values for display
-const formatValue = (value: unknown): string => {
-  if (value === null) return 'null';
-  if (value === undefined) return 'undefined';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  if (typeof value === 'function') return `[Function: ${value.name || 'anonymous'}]`;
-  if (Array.isArray(value)) {
-    return `[${value.map(formatValue).join(', ')}]`;
-  }
-  if (typeof value === 'object') {
-    try {
-      return JSON.stringify(value, null, 2);
-    } catch {
-      return '[Object]';
-    }
-  }
-  return String(value);
-};
-
-export default function CodePlayground({
+function CodePlaygroundInner({
   initialCode = '// Write your JavaScript code here\nconsole.log("Hello, World!");',
   language = 'javascript',
   className = '',
@@ -215,8 +230,47 @@ export default function CodePlayground({
   const [showResetSuccess, setShowResetSuccess] = useState(false);
   const [mobileTab, setMobileTab] = useState<'code' | 'output'>('code');
 
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const timeoutRef = useRef<number | null>(null);
+
   // Track if code has been modified from original
   const hasChanges = code !== initialCode;
+
+  // Handle messages from the sandboxed iframe
+  const handleMessage = useCallback((event: MessageEvent) => {
+    if (event.data?.type === 'execution-result') {
+      // Clear timeout since we got a response
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+
+      setResult({
+        output: event.data.output || [],
+        error: event.data.error || null,
+        executionTime: event.data.executionTime || 0,
+      });
+      setIsRunning(false);
+
+      // Clean up iframe
+      if (iframeRef.current) {
+        iframeRef.current.remove();
+        iframeRef.current = null;
+      }
+    }
+  }, []);
+
+  // Set up message listener
+  useEffect(() => {
+    window.addEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      // Clean up timeout on unmount
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [handleMessage]);
 
   // Show upgrade prompt for free users
   if (!isPro) {
@@ -268,49 +322,59 @@ export default function CodePlayground({
     );
   }
 
-  const handleRun = async (codeToRun: string) => {
-    const supportedLanguages = ['javascript', 'typescript', 'python'];
+  const executeJavaScriptInSandbox = (codeToRun: string) => {
+    setIsRunning(true);
+    setResult(null);
+
+    // Clean up any existing iframe
+    if (iframeRef.current) {
+      iframeRef.current.remove();
+    }
+
+    // Create a new sandboxed iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    // Strict sandbox: only allow scripts, no forms, no popups, no top navigation
+    iframe.sandbox.add('allow-scripts');
+    iframe.setAttribute('referrerpolicy', 'no-referrer');
+
+    // Set up the iframe content
+    const sandboxHtml = createSandboxedRunner(codeToRun);
+    iframe.srcdoc = sandboxHtml;
+
+    // Add iframe to DOM
+    document.body.appendChild(iframe);
+    iframeRef.current = iframe;
+
+    // Set execution timeout (5 seconds)
+    timeoutRef.current = window.setTimeout(() => {
+      setResult({
+        output: [],
+        error: 'Execution timed out after 5 seconds. Your code may have an infinite loop.',
+        executionTime: EXECUTION_TIMEOUT,
+      });
+      setIsRunning(false);
+
+      // Clean up iframe
+      if (iframeRef.current) {
+        iframeRef.current.remove();
+        iframeRef.current = null;
+      }
+    }, EXECUTION_TIMEOUT);
+  };
+
+  const handleRun = (codeToRun: string) => {
+    const supportedLanguages = ['javascript', 'typescript'];
     if (!supportedLanguages.includes(language)) {
       setResult({
         output: [],
-        error: `Running ${language} code is not supported yet. Supported languages: JavaScript, Python.`,
+        error: `Running ${language} code is not supported. Only JavaScript is supported in the code playground.`,
         executionTime: 0,
       });
       return;
     }
 
-    setIsRunning(true);
-
-    if (language === 'python') {
-      // Check if Pyodide needs to be loaded
-      if (!pyodideInstance && !pyodideLoading) {
-        setResult({
-          output: ['Loading Python runtime (first time may take a few seconds)...'],
-          error: null,
-          executionTime: 0,
-        });
-      }
-
-      try {
-        const executionResult = await executePython(codeToRun);
-        setResult(executionResult);
-      } catch (err) {
-        setResult({
-          output: [],
-          error: err instanceof Error ? err.message : String(err),
-          executionTime: 0,
-        });
-      } finally {
-        setIsRunning(false);
-      }
-    } else {
-      // JavaScript/TypeScript
-      setTimeout(() => {
-        const executionResult = executeJavaScript(codeToRun);
-        setResult(executionResult);
-        setIsRunning(false);
-      }, 10);
-    }
+    executeJavaScriptInSandbox(codeToRun);
   };
 
   const clearOutput = () => {
@@ -319,7 +383,6 @@ export default function CodePlayground({
   };
 
   const handleSaveSnippet = () => {
-    console.log('Save snippet clicked', { onSaveSnippet: !!onSaveSnippet, code: code.trim().length > 0 });
     if (onSaveSnippet && code.trim()) {
       onSaveSnippet(code, language);
       setShowSaveSuccess(true);
@@ -347,14 +410,14 @@ export default function CodePlayground({
   const isHtmlMode = language === 'html' || language === 'css';
 
   // Auto-switch to output tab when code runs
-  const handleRunWithTabSwitch = async (codeToRun: string) => {
+  const handleRunWithTabSwitch = (codeToRun: string) => {
     setMobileTab('output');
-    await handleRun(codeToRun);
+    handleRun(codeToRun);
   };
 
   return (
     <div className={`space-y-0 ${className}`}>
-      {/* Mobile Tab Switcher - only show on small screens for JS/Python */}
+      {/* Mobile Tab Switcher - only show on small screens for JS */}
       {!isHtmlMode && (
         <div className="flex sm:hidden border-3 border-b-0 border-border bg-gray-800">
           <button
@@ -421,7 +484,7 @@ export default function CodePlayground({
         </div>
       )}
 
-      {/* Output Panel for JS/Python */}
+      {/* Output Panel for JS */}
       {!isHtmlMode && (
         <div className={`border-3 border-t-0 border-border bg-gray-900 ${mobileTab === 'code' ? 'hidden sm:block' : ''}`}>
           <div className="flex items-center justify-between px-3 py-2 bg-gray-800 border-b border-gray-700">
@@ -531,5 +594,14 @@ export default function CodePlayground({
         </div>
       )}
     </div>
+  );
+}
+
+// Export wrapped with error boundary
+export default function CodePlayground(props: CodePlaygroundProps) {
+  return (
+    <CodePlaygroundErrorBoundary>
+      <CodePlaygroundInner {...props} />
+    </CodePlaygroundErrorBoundary>
   );
 }

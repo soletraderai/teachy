@@ -19,6 +19,15 @@ export {
   type UpdateGoalInput,
 } from './mutations/useGoalMutations';
 
+// Timed Session hooks
+export {
+  useTimedSessionHistory,
+  useActiveTimedSession,
+  useCreateTimedSession,
+  useUpdateTimedSession,
+  useTimedSessionQuestions,
+} from './queries/useTimedSessions';
+
 // Utility hooks
 export { useDebounce } from './useDebounce';
 export { useOnlineStatus } from './useOnlineStatus';

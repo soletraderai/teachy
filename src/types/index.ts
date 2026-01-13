@@ -141,3 +141,44 @@ export interface ProcessingState {
   progress: number;
   message: string;
 }
+
+// Timed Session types
+export type TimedSessionType = 'RAPID' | 'FOCUSED' | 'COMPREHENSIVE';
+export type TimedSessionStatus = 'ACTIVE' | 'COMPLETED' | 'ABANDONED';
+
+export interface TimedSession {
+  id: string;
+  userId: string;
+  sessionType: TimedSessionType;
+  topicFilter: string | null;
+  questionsTotal: number;
+  questionsAnswered: number;
+  questionsCorrect: number;
+  timeLimitSeconds: number;
+  timeUsedSeconds: number;
+  status: TimedSessionStatus;
+  startedAt: string;
+  completedAt: string | null;
+  createdAt: string;
+  // Computed fields from API
+  timeRemaining?: number;
+  progress?: number;
+}
+
+export interface TimedSessionConfig {
+  type: TimedSessionType;
+  label: string;
+  description: string;
+  questions: number;
+  timeLimit: number; // seconds
+  icon: string;
+}
+
+// Question for timed sessions (from stored topics)
+export interface TimedQuestion {
+  id: string;
+  topicId: string;
+  topicName: string;
+  questionText: string;
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+}

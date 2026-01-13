@@ -17,6 +17,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Supabase client libraries (frontend and backend)
 - Knowledge base persistence to database (`POST /api/sessions/:id/sources`)
 - AI feedback now references knowledge base sources for richer responses
+- **Timed Sessions feature** (Phase 3):
+  - Three session types: Rapid (5min/10q), Focused (15min/20q), Comprehensive (30min/30q)
+  - Real-time countdown timer with 1-minute warning
+  - Skip, abandon, and next question controls
+  - AI-powered answer evaluation with graceful fallback
+  - Results page with accuracy circle visualization and performance feedback
+  - Session history page with filtering and sorting
+  - New routes: `/timed-sessions`, `/timed-sessions/history`, `/timed-sessions/:id/active`, `/timed-sessions/:id/results`
+  - TanStack Query hooks: `useTimedSessionHistory`, `useActiveTimedSession`, `useCreateTimedSession`, `useUpdateTimedSession`
+  - Backend endpoints: `GET /api/timed-sessions/:id/questions`, `POST /api/ai/evaluate-timed-answer`
+- **Knowledge Map Optimization** (Phase 4):
+  - Web Worker for force-directed layout calculations (offloads main thread)
+  - requestAnimationFrame for smooth pan/zoom interactions
+  - Batch drawing by color groups for better rendering performance
+  - Layout progress indicator during calculation
+  - Simple circular layout fallback for small datasets (<50 nodes)
 
 ### Changed
 - Migrated authentication from JWT to Supabase Auth
@@ -26,6 +42,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extended query keys in `queryClient.ts` for commitment, learningInsights, and goals
 - Enhanced `evaluateAnswer` API to accept knowledge base sources
 - Session save flow now automatically persists knowledge base to SessionSource table
+- **KnowledgeMap.tsx complete rewrite** with performance optimizations (useMemo, useCallback)
+- **CodePlayground.tsx complete rewrite** (Phase 5):
+  - Removed Python/Pyodide support (JavaScript only)
+  - Replaced `new Function()` with isolated iframe sandbox (`allow-scripts` only)
+  - Blocked dangerous APIs: fetch, XMLHttpRequest, WebSocket, Worker, localStorage, etc.
+  - Console output captured via postMessage communication
+  - Added 5-second execution timeout for infinite loop protection
+  - Added React Error Boundary for graceful crash recovery
 
 ### Fixed
 - All 12 pre-existing TypeScript errors resolved
@@ -217,7 +241,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 0.7.0 | 2026-01-12 | Subscriptions | 169/415 (40.7%)* |
 | 0.8.0 | 2026-01-12 | Dashboard & Reviews | 290/415 (69.9%) |
 | 0.9.0 | 2026-01-13 | Pro features | 372/415 (89.6%) |
-| Unreleased | 2026-01-13 | TanStack Query | 372/415 (89.6%) |
+| Unreleased | 2026-01-13 | Phases 0-5 | ~396/415 (~95%) |
 
 *Note: Feature count increased from 302 to 415 during Phase 2 planning, causing apparent progress decrease.
 

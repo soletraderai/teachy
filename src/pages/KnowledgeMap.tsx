@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -41,18 +41,27 @@ interface KnowledgeMapData {
   totalTopics: number;
 }
 
+// Optimized node rendering with pre-calculated values
+interface RenderNode extends MapNode {
+  radius: number;
+  hue: number;
+}
+
 export default function KnowledgeMap() {
   const { user, isAuthenticated } = useAuthStore();
   const isPro = isAuthenticated() && user?.tier === 'PRO';
 
   const [data, setData] = useState<KnowledgeMapData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [layoutProgress, setLayoutProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [selectedNode, setSelectedNode] = useState<MapNode | null>(null);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [nodePositions, setNodePositions] = useState<Map<string, { x: number; y: number }>>(new Map());
+  const workerRef = useRef<Worker | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   // Zoom and pan state
   const [zoom, setZoom] = useState(1);
@@ -66,6 +75,194 @@ export default function KnowledgeMap() {
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<string[]>([]);
+
+  // Pre-calculate render nodes for better performance
+  const renderNodes = useMemo<RenderNode[]>(() => {
+    if (!data) return [];
+    return data.nodes.map(node => ({
+      ...node,
+      radius: 20 + (masteryToNumber(node.masteryLevel) * 4),
+      hue: Math.min(120, masteryToNumber(node.masteryLevel) * 24),
+    }));
+  }, [data]);
+
+  // Filter nodes based on category
+  const filteredNodes = useMemo(() => {
+    if (!selectedCategory) return renderNodes;
+    return renderNodes.filter(node => node.category === selectedCategory);
+  }, [renderNodes, selectedCategory]);
+
+  const filteredNodeIds = useMemo(() => {
+    return new Set(filteredNodes.map(n => n.id));
+  }, [filteredNodes]);
+
+  // Initialize Web Worker
+  useEffect(() => {
+    // Create worker from blob to avoid build configuration issues
+    const workerCode = `
+      // Force-directed layout algorithm
+      function calculateForceDirectedLayout(nodes, connections, width, height, iterations) {
+        const positions = new Map();
+        const centerX = width / 2;
+        const centerY = height / 2;
+
+        // Initialize positions - group by category in a circle
+        const categoryGroups = new Map();
+        nodes.forEach(node => {
+          const category = node.category || 'Uncategorized';
+          if (!categoryGroups.has(category)) {
+            categoryGroups.set(category, []);
+          }
+          categoryGroups.get(category).push(node);
+        });
+
+        // Initial placement in circular arrangement by category
+        let totalAngle = 0;
+        const radius = Math.min(width, height) * 0.35;
+
+        const categoryAngles = Array.from(categoryGroups.entries()).map(([category, categoryNodes]) => {
+          const angleSpan = (categoryNodes.length / nodes.length) * Math.PI * 2;
+          const start = totalAngle;
+          totalAngle += angleSpan;
+          return { category, nodes: categoryNodes, start, span: angleSpan };
+        });
+
+        categoryAngles.forEach(({ nodes: categoryNodes, start, span }) => {
+          categoryNodes.forEach((node, i) => {
+            const angle = start + (span * (i + 0.5) / categoryNodes.length);
+            const nodeRadius = radius * (0.6 + Math.random() * 0.4);
+            positions.set(node.id, {
+              x: centerX + Math.cos(angle) * nodeRadius,
+              y: centerY + Math.sin(angle) * nodeRadius,
+              vx: 0,
+              vy: 0,
+            });
+          });
+        });
+
+        // Force simulation parameters
+        const repulsionStrength = 500;
+        const attractionStrength = 0.1;
+        const dampening = 0.9;
+        const minDistance = 60;
+
+        // Run simulation
+        for (let iter = 0; iter < iterations; iter++) {
+          const alpha = 1 - iter / iterations;
+
+          // Apply repulsion between all nodes
+          for (let i = 0; i < nodes.length; i++) {
+            const nodeA = nodes[i];
+            const posA = positions.get(nodeA.id);
+
+            for (let j = i + 1; j < nodes.length; j++) {
+              const nodeB = nodes[j];
+              const posB = positions.get(nodeB.id);
+
+              const dx = posB.x - posA.x;
+              const dy = posB.y - posA.y;
+              const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+              if (dist < minDistance * 3) {
+                const force = (repulsionStrength * alpha) / (dist * dist);
+                const fx = (dx / dist) * force;
+                const fy = (dy / dist) * force;
+
+                posA.vx -= fx;
+                posA.vy -= fy;
+                posB.vx += fx;
+                posB.vy += fy;
+              }
+            }
+          }
+
+          // Apply attraction along connections
+          connections.forEach(conn => {
+            const posA = positions.get(conn.source);
+            const posB = positions.get(conn.target);
+            if (!posA || !posB) return;
+
+            const dx = posB.x - posA.x;
+            const dy = posB.y - posA.y;
+
+            const force = attractionStrength * conn.strength * alpha;
+            const fx = dx * force;
+            const fy = dy * force;
+
+            posA.vx += fx;
+            posA.vy += fy;
+            posB.vx -= fx;
+            posB.vy -= fy;
+          });
+
+          // Apply center gravity
+          const centerGravity = 0.01 * alpha;
+          positions.forEach((pos) => {
+            pos.vx += (centerX - pos.x) * centerGravity;
+            pos.vy += (centerY - pos.y) * centerGravity;
+          });
+
+          // Update positions with velocity
+          positions.forEach((pos) => {
+            pos.vx *= dampening;
+            pos.vy *= dampening;
+            pos.x += pos.vx;
+            pos.y += pos.vy;
+            const padding = 50;
+            pos.x = Math.max(padding, Math.min(width - padding, pos.x));
+            pos.y = Math.max(padding, Math.min(height - padding, pos.y));
+          });
+
+          if (iter % 20 === 0) {
+            self.postMessage({ type: 'progress', progress: Math.round((iter / iterations) * 100) });
+          }
+        }
+
+        const finalPositions = {};
+        positions.forEach((pos, id) => {
+          finalPositions[id] = { x: pos.x, y: pos.y };
+        });
+        return finalPositions;
+      }
+
+      self.onmessage = (event) => {
+        const { type, nodes, connections, width, height, iterations } = event.data;
+        if (type === 'calculate') {
+          try {
+            const positions = calculateForceDirectedLayout(nodes, connections, width, height, iterations || 100);
+            self.postMessage({ type: 'complete', positions });
+          } catch (error) {
+            self.postMessage({ type: 'error', error: String(error) });
+          }
+        }
+      };
+    `;
+
+    const blob = new Blob([workerCode], { type: 'application/javascript' });
+    const workerUrl = URL.createObjectURL(blob);
+    workerRef.current = new Worker(workerUrl);
+
+    workerRef.current.onmessage = (event) => {
+      const { type, positions, progress } = event.data;
+      if (type === 'progress') {
+        setLayoutProgress(progress);
+      } else if (type === 'complete') {
+        const posMap = new Map<string, { x: number; y: number }>();
+        Object.entries(positions).forEach(([id, pos]) => {
+          posMap.set(id, pos as { x: number; y: number });
+        });
+        setNodePositions(posMap);
+        setLayoutProgress(100);
+      }
+    };
+
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+      }
+      URL.revokeObjectURL(workerUrl);
+    };
+  }, []);
 
   // Fetch knowledge map data
   useEffect(() => {
@@ -100,74 +297,65 @@ export default function KnowledgeMap() {
     fetchData();
   }, [isPro]);
 
-  // Calculate node positions using force-directed layout
-  const calculatePositions = useCallback(() => {
-    if (!data || !canvasRef.current) return;
+  // Calculate positions using Web Worker
+  useEffect(() => {
+    if (!data || !canvasRef.current || !workerRef.current) return;
 
     const canvas = canvasRef.current;
-    const width = canvas.width;
-    const height = canvas.height;
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const radius = Math.min(width, height) * 0.35;
+    const container = canvas.parentElement;
+    if (!container) return;
 
-    const positions = new Map<string, { x: number; y: number }>();
+    canvas.width = container.clientWidth;
+    canvas.height = 500;
 
-    // Position nodes in a circle, grouped by category
-    const categoryGroups = new Map<string, MapNode[]>();
-    data.nodes.forEach(node => {
-      const category = node.category || 'Uncategorized';
-      if (!categoryGroups.has(category)) {
-        categoryGroups.set(category, []);
-      }
-      categoryGroups.get(category)!.push(node);
-    });
+    // Use fallback calculation if nodes are few, otherwise use worker
+    if (data.nodes.length < 50) {
+      // Simple circular layout for small datasets
+      const positions = new Map<string, { x: number; y: number }>();
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = Math.min(canvas.width, canvas.height) * 0.35;
 
-    let totalAngle = 0;
-    const categoryAngles = Array.from(categoryGroups.entries()).map(([category, nodes]) => {
-      const angleSpan = (nodes.length / data.nodes.length) * Math.PI * 2;
-      const start = totalAngle;
-      totalAngle += angleSpan;
-      return { category, nodes, start, span: angleSpan };
-    });
-
-    categoryAngles.forEach(({ nodes, start, span }) => {
-      nodes.forEach((node, i) => {
-        const angle = start + (span * (i + 0.5) / nodes.length);
-        const nodeRadius = radius * (0.7 + Math.random() * 0.3);
+      data.nodes.forEach((node, i) => {
+        const angle = (i / data.nodes.length) * Math.PI * 2;
         positions.set(node.id, {
-          x: centerX + Math.cos(angle) * nodeRadius,
-          y: centerY + Math.sin(angle) * nodeRadius,
+          x: centerX + Math.cos(angle) * radius,
+          y: centerY + Math.sin(angle) * radius,
         });
       });
-    });
-
-    setNodePositions(positions);
+      setNodePositions(positions);
+    } else {
+      // Use Web Worker for large datasets
+      workerRef.current.postMessage({
+        type: 'calculate',
+        nodes: data.nodes,
+        connections: data.connections,
+        width: canvas.width,
+        height: canvas.height,
+        iterations: Math.min(150, 50 + data.nodes.length),
+      });
+    }
   }, [data]);
 
-  // Draw the knowledge map
+  // Optimized drawing using requestAnimationFrame
   const drawMap = useCallback(() => {
     if (!data || !canvasRef.current || nodePositions.size === 0) return;
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
 
-    // Filter nodes based on selected category
-    const filteredNodes = selectedCategory
-      ? data.nodes.filter(node => node.category === selectedCategory)
-      : data.nodes;
-    const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Clear with background color (faster than clearRect for opaque backgrounds)
+    ctx.fillStyle = '#FFFEF5';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Apply zoom and pan transformations
     ctx.save();
     ctx.translate(panOffset.x, panOffset.y);
     ctx.scale(zoom, zoom);
 
-    // Draw connections (only between visible nodes)
+    // Draw connections (batch drawing for performance)
+    ctx.beginPath();
     data.connections.forEach(conn => {
       if (!filteredNodeIds.has(conn.source) || !filteredNodeIds.has(conn.target)) return;
 
@@ -175,15 +363,51 @@ export default function KnowledgeMap() {
       const target = nodePositions.get(conn.target);
       if (!source || !target) return;
 
-      ctx.beginPath();
       ctx.moveTo(source.x, source.y);
       ctx.lineTo(target.x, target.y);
-      ctx.strokeStyle = `rgba(0, 0, 0, ${0.1 + conn.strength * 0.1})`;
-      ctx.lineWidth = conn.strength / zoom; // Adjust line width for zoom
-      ctx.stroke();
+    });
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+    ctx.lineWidth = 1 / zoom;
+    ctx.stroke();
+
+    // Draw nodes (batch by color for performance)
+    const nodesByColor = new Map<string, RenderNode[]>();
+    filteredNodes.forEach(node => {
+      const isHovered = hoveredNode === node.id;
+      const isSelected = selectedNode?.id === node.id;
+      const isSearchResult = searchResults.includes(node.id);
+
+      let color: string;
+      if (isSearchResult) {
+        color = '#FF6B6B';
+      } else if (isSelected) {
+        color = '#FFDE59';
+      } else if (isHovered) {
+        color = `hsl(${node.hue}, 70%, 60%)`;
+      } else {
+        color = `hsl(${node.hue}, 60%, 70%)`;
+      }
+
+      if (!nodesByColor.has(color)) {
+        nodesByColor.set(color, []);
+      }
+      nodesByColor.get(color)!.push(node);
     });
 
-    // Draw nodes (only filtered ones)
+    // Draw nodes by color groups
+    nodesByColor.forEach((nodes, color) => {
+      ctx.fillStyle = color;
+      nodes.forEach(node => {
+        const pos = nodePositions.get(node.id);
+        if (!pos) return;
+
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, node.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    });
+
+    // Draw borders and labels (separate pass)
     filteredNodes.forEach(node => {
       const pos = nodePositions.get(node.id);
       if (!pos) return;
@@ -191,104 +415,94 @@ export default function KnowledgeMap() {
       const isHovered = hoveredNode === node.id;
       const isSelected = selectedNode?.id === node.id;
       const isSearchResult = searchResults.includes(node.id);
-      const nodeRadius = 20 + (masteryToNumber(node.masteryLevel) * 4);
 
-      // Node background
+      // Border
       ctx.beginPath();
-      ctx.arc(pos.x, pos.y, nodeRadius, 0, Math.PI * 2);
-
-      // Color based on mastery level (highlight search results)
-      const hue = Math.min(120, masteryToNumber(node.masteryLevel) * 24); // Green to yellow based on mastery
-      if (isSearchResult) {
-        ctx.fillStyle = '#FF6B6B'; // Red highlight for search results
-      } else if (isSelected) {
-        ctx.fillStyle = '#FFDE59';
-      } else if (isHovered) {
-        ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
-      } else {
-        ctx.fillStyle = `hsl(${hue}, 60%, 70%)`;
-      }
-      ctx.fill();
-
-      // Border (thicker for search results)
+      ctx.arc(pos.x, pos.y, node.radius, 0, Math.PI * 2);
       ctx.strokeStyle = isSearchResult ? '#FF0000' : '#000';
-      ctx.lineWidth = (isSelected || isHovered || isSearchResult ? 3 : 2) / zoom; // Adjust line width for zoom
+      ctx.lineWidth = (isSelected || isHovered || isSearchResult ? 3 : 2) / zoom;
       ctx.stroke();
 
-      // Node label
+      // Label
       ctx.fillStyle = '#000';
-      ctx.font = `${isSelected || isHovered ? 'bold ' : ''}${12 / zoom}px Inter, sans-serif`;
+      ctx.font = `${isSelected || isHovered ? 'bold ' : ''}${Math.max(10, 12 / zoom)}px Inter, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      // Truncate long names
       const maxLength = 15;
       const displayName = node.name.length > maxLength
         ? node.name.substring(0, maxLength) + '...'
         : node.name;
-      ctx.fillText(displayName, pos.x, pos.y + nodeRadius + 15);
+      ctx.fillText(displayName, pos.x, pos.y + node.radius + 15);
     });
 
     ctx.restore();
-  }, [data, nodePositions, hoveredNode, selectedNode, zoom, panOffset, selectedCategory, searchResults]);
+  }, [data, nodePositions, hoveredNode, selectedNode, zoom, panOffset, filteredNodes, filteredNodeIds, searchResults]);
 
-  // Initialize canvas and draw
+  // Animate with requestAnimationFrame
   useEffect(() => {
-    if (!canvasRef.current || !data) return;
+    const animate = () => {
+      drawMap();
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
 
-    const canvas = canvasRef.current;
-    const container = canvas.parentElement;
-    if (!container) return;
+    // Only start animation loop when needed (during pan/zoom interactions)
+    if (isPanning) {
+      animate();
+    } else {
+      drawMap();
+    }
 
-    // Set canvas size
-    canvas.width = container.clientWidth;
-    canvas.height = 500;
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [drawMap, isPanning]);
 
-    calculatePositions();
-  }, [data, calculatePositions]);
-
-  // Redraw when positions or state changes
+  // Redraw when state changes (but not during panning - that uses rAF)
   useEffect(() => {
-    drawMap();
-  }, [drawMap]);
+    if (!isPanning) {
+      drawMap();
+    }
+  }, [drawMap, isPanning]);
 
-  // Convert screen coordinates to canvas coordinates (accounting for zoom/pan)
-  const screenToCanvas = (screenX: number, screenY: number) => {
+  // Convert screen coordinates to canvas coordinates
+  const screenToCanvas = useCallback((screenX: number, screenY: number) => {
     return {
       x: (screenX - panOffset.x) / zoom,
       y: (screenY - panOffset.y) / zoom,
     };
-  };
+  }, [panOffset, zoom]);
+
+  // Find node at position (optimized with spatial check)
+  const findNodeAtPosition = useCallback((x: number, y: number): MapNode | null => {
+    for (const node of filteredNodes) {
+      const pos = nodePositions.get(node.id);
+      if (!pos) continue;
+
+      const dist = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
+      if (dist <= node.radius) {
+        return node;
+      }
+    }
+    return null;
+  }, [filteredNodes, nodePositions]);
 
   // Handle canvas click
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!canvasRef.current || !data || isPanning) return;
 
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
-    const screenX = e.clientX - rect.left;
-    const screenY = e.clientY - rect.top;
-    const { x, y } = screenToCanvas(screenX, screenY);
+    const { x, y } = screenToCanvas(e.clientX - rect.left, e.clientY - rect.top);
 
-    // Check if click is on a node
-    for (const node of data.nodes) {
-      const pos = nodePositions.get(node.id);
-      if (!pos) continue;
-
-      const nodeRadius = 20 + (masteryToNumber(node.masteryLevel) * 4);
-      const dist = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
-
-      if (dist <= nodeRadius) {
-        setSelectedNode(selectedNode?.id === node.id ? null : node);
-        return;
-      }
-    }
-
-    setSelectedNode(null);
-  };
+    const node = findNodeAtPosition(x, y);
+    setSelectedNode(node && selectedNode?.id === node.id ? null : node);
+  }, [data, isPanning, screenToCanvas, findNodeAtPosition, selectedNode]);
 
   // Handle canvas mouse move
-  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!canvasRef.current || !data) return;
 
     const canvas = canvasRef.current;
@@ -306,46 +520,31 @@ export default function KnowledgeMap() {
     }
 
     const { x, y } = screenToCanvas(screenX, screenY);
+    const node = findNodeAtPosition(x, y);
 
-    // Check if hover is on a node
-    for (const node of data.nodes) {
-      const pos = nodePositions.get(node.id);
-      if (!pos) continue;
-
-      const nodeRadius = 20 + (masteryToNumber(node.masteryLevel) * 4);
-      const dist = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
-
-      if (dist <= nodeRadius) {
-        if (hoveredNode !== node.id) {
-          setHoveredNode(node.id);
-        }
-        return;
-      }
+    if (node?.id !== hoveredNode) {
+      setHoveredNode(node?.id || null);
     }
-
-    if (hoveredNode) {
-      setHoveredNode(null);
-    }
-  };
+  }, [data, isPanning, panStart, screenToCanvas, findNodeAtPosition, hoveredNode]);
 
   // Handle mouse down for panning
-  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (e.button === 0) { // Left mouse button
+  const handleCanvasMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (e.button === 0) {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
       setPanStart({ x: e.clientX - rect.left, y: e.clientY - rect.top });
       setIsPanning(true);
     }
-  };
+  }, []);
 
-  // Handle mouse up to stop panning
-  const handleCanvasMouseUp = () => {
+  // Handle mouse up
+  const handleCanvasMouseUp = useCallback(() => {
     setIsPanning(false);
-  };
+  }, []);
 
   // Handle wheel for zooming
-  const handleCanvasWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+  const handleCanvasWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -354,11 +553,9 @@ export default function KnowledgeMap() {
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    // Calculate zoom factor
     const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
     const newZoom = Math.max(0.5, Math.min(3, zoom * zoomFactor));
 
-    // Adjust pan to zoom towards mouse position
     const zoomRatio = newZoom / zoom;
     setPanOffset(prev => ({
       x: mouseX - (mouseX - prev.x) * zoomRatio,
@@ -366,16 +563,16 @@ export default function KnowledgeMap() {
     }));
 
     setZoom(newZoom);
-  };
+  }, [zoom]);
 
   // Reset zoom and pan
-  const handleResetView = () => {
+  const handleResetView = useCallback(() => {
     setZoom(1);
     setPanOffset({ x: 0, y: 0 });
-  };
+  }, []);
 
   // Handle search
-  const handleSearch = (query: string) => {
+  const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
     if (!data || !query.trim()) {
       setSearchResults([]);
@@ -388,7 +585,6 @@ export default function KnowledgeMap() {
       .map(node => node.id);
     setSearchResults(matches);
 
-    // If there's exactly one match, pan to it
     if (matches.length === 1) {
       const matchId = matches[0];
       const pos = nodePositions.get(matchId);
@@ -401,10 +597,10 @@ export default function KnowledgeMap() {
         setSelectedNode(data.nodes.find(n => n.id === matchId) || null);
       }
     }
-  };
+  }, [data, nodePositions, zoom]);
 
   // Go to specific search result
-  const goToSearchResult = (nodeId: string) => {
+  const goToSearchResult = useCallback((nodeId: string) => {
     const pos = nodePositions.get(nodeId);
     if (pos && canvasRef.current && data) {
       const canvas = canvasRef.current;
@@ -414,30 +610,14 @@ export default function KnowledgeMap() {
       });
       setSelectedNode(data.nodes.find(n => n.id === nodeId) || null);
     }
-  };
+  }, [nodePositions, zoom, data]);
 
   // Export map as image
-  const handleExportImage = () => {
+  const handleExportImage = useCallback(() => {
     if (!canvasRef.current) return;
 
     const canvas = canvasRef.current;
-
-    // Create a temporary canvas with white background
-    const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = canvas.width;
-    exportCanvas.height = canvas.height;
-    const exportCtx = exportCanvas.getContext('2d');
-    if (!exportCtx) return;
-
-    // Fill white background
-    exportCtx.fillStyle = '#FFFEF5';
-    exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-
-    // Copy the current canvas content
-    exportCtx.drawImage(canvas, 0, 0);
-
-    // Convert to blob and download
-    exportCanvas.toBlob((blob) => {
+    canvas.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -449,8 +629,9 @@ export default function KnowledgeMap() {
       URL.revokeObjectURL(url);
       setToast({ message: 'Knowledge map exported!', type: 'success' });
     }, 'image/png');
-  };
+  }, []);
 
+  // Non-Pro state
   if (!isPro) {
     return (
       <div className="space-y-6">
@@ -476,17 +657,24 @@ export default function KnowledgeMap() {
     );
   }
 
+  // Loading state
   if (loading) {
     return (
       <div className="space-y-6">
         <h1 className="font-heading text-3xl font-bold text-text">Knowledge Map</h1>
         <Card className="flex items-center justify-center py-20">
-          <div className="w-12 h-12 border-3 border-border border-t-primary animate-spin" />
+          <div className="text-center">
+            <div className="w-12 h-12 mx-auto border-3 border-border border-t-primary animate-spin mb-4" />
+            {layoutProgress > 0 && layoutProgress < 100 && (
+              <p className="text-text/70">Calculating layout... {layoutProgress}%</p>
+            )}
+          </div>
         </Card>
       </div>
     );
   }
 
+  // Error state
   if (error) {
     return (
       <div className="space-y-6">
@@ -499,6 +687,7 @@ export default function KnowledgeMap() {
     );
   }
 
+  // Empty state
   if (!data || data.nodes.length === 0) {
     return (
       <div className="space-y-6">
@@ -632,6 +821,15 @@ export default function KnowledgeMap() {
             onMouseLeave={() => { setHoveredNode(null); setIsPanning(false); }}
             onWheel={handleCanvasWheel}
           />
+          {/* Layout progress indicator */}
+          {layoutProgress > 0 && layoutProgress < 100 && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+              <div className="text-center">
+                <div className="w-12 h-12 mx-auto border-3 border-border border-t-primary animate-spin mb-4" />
+                <p className="text-text/70">Calculating layout... {layoutProgress}%</p>
+              </div>
+            </div>
+          )}
           {/* Zoom controls */}
           <div className="absolute bottom-4 right-4 flex items-center gap-2">
             <button

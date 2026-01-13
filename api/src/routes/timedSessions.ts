@@ -111,4 +111,73 @@ router.get('/history', requirePro, async (req: AuthenticatedRequest, res: Respon
   }
 });
 
+// GET /api/timed-sessions/:id/questions - Get questions for a timed session
+router.get('/:id/questions', requirePro, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id as string;
+    const timedSession = await prisma.timedSession.findFirst({
+      where: { id, userId: req.user!.id },
+    });
+
+    if (!timedSession) {
+      throw new AppError(404, 'Timed session not found', 'TIMED_SESSION_NOT_FOUND');
+    }
+
+    // Get questions from user's topics based on session config
+    const questionsNeeded = timedSession.questionsTotal;
+
+    // Find all topics with questions for this user
+    const topics = await prisma.topic.findMany({
+      where: {
+        userId: req.user!.id,
+        ...(timedSession.topicFilter && { category: timedSession.topicFilter }),
+      },
+      include: {
+        questions: {
+          take: 3, // Max 3 questions per topic
+        },
+      },
+    });
+
+    // Flatten and shuffle questions
+    const allQuestions = topics.flatMap(topic =>
+      topic.questions.map(q => ({
+        id: q.id,
+        topicId: topic.id,
+        topicName: topic.name,
+        questionText: q.questionText,
+        difficulty: q.difficulty,
+      }))
+    );
+
+    // Shuffle using Fisher-Yates
+    for (let i = allQuestions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
+    }
+
+    // Take only the needed number of questions
+    const selectedQuestions = allQuestions.slice(0, questionsNeeded);
+
+    // If not enough questions from database, generate placeholder questions
+    if (selectedQuestions.length < questionsNeeded) {
+      const placeholders = Array.from(
+        { length: questionsNeeded - selectedQuestions.length },
+        (_, i) => ({
+          id: `placeholder-${i}`,
+          topicId: 'general',
+          topicName: 'General Knowledge',
+          questionText: `Practice question ${i + 1}: What have you learned recently that you found interesting?`,
+          difficulty: 'MEDIUM' as const,
+        })
+      );
+      selectedQuestions.push(...placeholders);
+    }
+
+    res.json(selectedQuestions);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
