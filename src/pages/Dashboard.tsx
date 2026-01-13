@@ -459,6 +459,111 @@ export default function Dashboard() {
         </Card>
       )}
 
+      {/* Review Needed - Topics with <70% accuracy */}
+      {library.sessions.length > 0 && (() => {
+        // Calculate accuracy for each topic
+        const topicAccuracy: Record<string, {
+          name: string;
+          totalQuestions: number;
+          correctAnswers: number;
+          accuracy: number;
+          sessionId: string;
+        }> = {};
+
+        library.sessions.forEach((session) => {
+          session.topics.forEach((topic) => {
+            const key = topic.title.toLowerCase().slice(0, 30);
+            if (!topicAccuracy[key]) {
+              topicAccuracy[key] = {
+                name: topic.title,
+                totalQuestions: 0,
+                correctAnswers: 0,
+                accuracy: 0,
+                sessionId: session.id,
+              };
+            }
+            topic.questions.forEach((q) => {
+              if (q.userAnswer) {
+                topicAccuracy[key].totalQuestions += 1;
+                // Count as correct if feedback is positive or if user answered
+                // (we don't have explicit correctness, so we use answered as a proxy)
+                if (q.feedback && q.feedback.toLowerCase().includes('great') ||
+                    q.feedback && q.feedback.toLowerCase().includes('correct') ||
+                    q.feedback && q.feedback.toLowerCase().includes('excellent')) {
+                  topicAccuracy[key].correctAnswers += 1;
+                }
+              }
+            });
+          });
+        });
+
+        // Calculate accuracy and find topics needing review
+        const needsReview = Object.values(topicAccuracy)
+          .filter((t) => t.totalQuestions >= 2)
+          .map((t) => ({
+            ...t,
+            accuracy: t.totalQuestions > 0
+              ? Math.round((t.correctAnswers / t.totalQuestions) * 100)
+              : 0,
+          }))
+          .filter((t) => t.accuracy < 70)
+          .sort((a, b) => a.accuracy - b.accuracy)
+          .slice(0, 3);
+
+        if (needsReview.length === 0) return null;
+
+        return (
+          <Card className="border-error/50">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-heading text-xl font-bold text-text">
+                    Review Needed
+                  </h2>
+                  <span className="material-icons text-error" aria-hidden="true">
+                    priority_high
+                  </span>
+                </div>
+                <button
+                  onClick={() => navigate('/review')}
+                  className="px-4 py-2 font-heading font-semibold text-sm bg-error/20 border-2 border-border shadow-brutal-sm hover:shadow-brutal transition-all flex items-center gap-2"
+                >
+                  <span className="material-icons text-base" aria-hidden="true">
+                    refresh
+                  </span>
+                  Start Review
+                </button>
+              </div>
+              <p className="text-sm text-text/70">
+                Topics with less than 70% accuracy need more practice
+              </p>
+              <div className="space-y-2">
+                {needsReview.map((topic, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 bg-error/10 border-2 border-border"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-heading font-semibold text-text truncate">
+                        {topic.name}
+                      </p>
+                      <p className="text-xs text-text/60">
+                        {topic.correctAnswers}/{topic.totalQuestions} correct
+                      </p>
+                    </div>
+                    <span className={`px-2 py-1 text-sm font-bold border-2 border-border ${
+                      topic.accuracy < 50 ? 'bg-error/30 text-error' : 'bg-primary/30 text-text'
+                    }`}>
+                      {topic.accuracy}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+        );
+      })()}
+
       {/* Learning Paths Section */}
       {library.sessions.length > 0 && (() => {
         // Generate learning paths from session data
@@ -1072,6 +1177,100 @@ export default function Dashboard() {
           </div>
         </Card>
       )}
+
+      {/* Recommended for You Section */}
+      {library.sessions.length > 0 && (() => {
+        // Generate recommendations based on user's learning patterns
+        const channelCounts: Record<string, {
+          channel: string;
+          count: number;
+          thumbnail?: string;
+          lastVideoTitle: string;
+          lastVideoUrl: string;
+        }> = {};
+
+        library.sessions.forEach((session) => {
+          const key = session.video.channel.toLowerCase();
+          if (!channelCounts[key]) {
+            channelCounts[key] = {
+              channel: session.video.channel,
+              count: 0,
+              thumbnail: session.video.thumbnailUrl,
+              lastVideoTitle: session.video.title,
+              lastVideoUrl: session.video.url,
+            };
+          }
+          channelCounts[key].count += 1;
+          // Update with most recent video
+          if (session.createdAt > (library.sessions.find(s => s.video.channel.toLowerCase() === key)?.createdAt || 0)) {
+            channelCounts[key].thumbnail = session.video.thumbnailUrl;
+            channelCounts[key].lastVideoTitle = session.video.title;
+            channelCounts[key].lastVideoUrl = session.video.url;
+          }
+        });
+
+        // Recommend channels user engages with most
+        const recommendations = Object.values(channelCounts)
+          .filter((c) => c.count >= 1)
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 3);
+
+        if (recommendations.length === 0) return null;
+
+        return (
+          <Card>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-heading text-xl font-bold text-text">
+                    Recommended for You
+                  </h2>
+                  <span className="material-icons text-secondary" aria-hidden="true">
+                    auto_awesome
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm text-text/70">
+                Continue learning from creators you've enjoyed
+              </p>
+              <div className="grid gap-4 md:grid-cols-3">
+                {recommendations.map((rec, index) => (
+                  <div
+                    key={index}
+                    className="p-4 bg-surface border-2 border-border hover:shadow-brutal-sm transition-all cursor-pointer"
+                    onClick={() => navigate('/')}
+                  >
+                    <div className="flex items-start gap-3">
+                      {rec.thumbnail ? (
+                        <img
+                          src={rec.thumbnail}
+                          alt={`${rec.channel} thumbnail`}
+                          className="w-16 h-12 object-cover border-2 border-border flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-16 h-12 bg-primary/30 border-2 border-border flex items-center justify-center flex-shrink-0">
+                          <span className="material-icons text-text/50">smart_display</span>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-heading font-semibold text-text truncate">
+                          {rec.channel}
+                        </h3>
+                        <p className="text-xs text-text/60 mt-1">
+                          {rec.count} video{rec.count !== 1 ? 's' : ''} watched
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-text/70 mt-2 line-clamp-2">
+                      {rec.lastVideoTitle}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+        );
+      })()}
 
       {/* Recent Sessions */}
       {recentSessions.length > 0 && (
