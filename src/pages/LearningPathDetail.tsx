@@ -2,11 +2,12 @@
  * LearningPathDetail Page
  * View details of a specific learning path
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import ProgressBar from '../components/ui/ProgressBar';
+import Toast from '../components/ui/Toast';
 import { StaggeredItem } from '../components/ui/StaggeredList';
 import { useSessionStore } from '../stores/sessionStore';
 import { useDocumentTitle } from '../hooks';
@@ -18,7 +19,9 @@ interface PathItem {
   videoThumbnail?: string;
   channel: string;
   sessionId: string;
+  topicId: string;
   completed: boolean;
+  skipped: boolean;
   questionsTotal: number;
   questionsAnswered: number;
 }
@@ -26,7 +29,8 @@ interface PathItem {
 export default function LearningPathDetail() {
   const { pathId } = useParams<{ pathId: string }>();
   const navigate = useNavigate();
-  const { library } = useSessionStore();
+  const { library, updateSession } = useSessionStore();
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   // Generate path data from sessions
   const pathData = useMemo(() => {
@@ -51,7 +55,9 @@ export default function LearningPathDetail() {
             videoThumbnail: session.video.thumbnailUrl,
             channel: session.video.channel,
             sessionId: session.id,
+            topicId: topic.id,
             completed: topic.completed || false,
+            skipped: topic.skipped || false,
             questionsTotal: topic.questions.length,
             questionsAnswered: topic.questions.filter(q => q.userAnswer).length,
           });
@@ -63,6 +69,7 @@ export default function LearningPathDetail() {
 
     const totalItems = items.length;
     const completedItems = items.filter(i => i.completed).length;
+    const skippedItems = items.filter(i => i.skipped).length;
     const progress = Math.round((completedItems / totalItems) * 100);
 
     return {
@@ -72,11 +79,38 @@ export default function LearningPathDetail() {
       items,
       totalItems,
       completedItems,
+      skippedItems,
       progress,
       totalQuestions: items.reduce((acc, i) => acc + i.questionsTotal, 0),
       answeredQuestions: items.reduce((acc, i) => acc + i.questionsAnswered, 0),
     };
   }, [pathId, library.sessions]);
+
+  // Handle skipping a topic
+  const handleSkipTopic = (sessionId: string, topicId: string, topicTitle: string) => {
+    const session = library.sessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    const updatedTopics = session.topics.map(topic =>
+      topic.id === topicId ? { ...topic, skipped: true } : topic
+    );
+
+    updateSession(sessionId, { topics: updatedTopics });
+    setToast({ message: `"${topicTitle}" marked as skipped`, type: 'info' });
+  };
+
+  // Handle unskipping a topic
+  const handleUnskipTopic = (sessionId: string, topicId: string, topicTitle: string) => {
+    const session = library.sessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    const updatedTopics = session.topics.map(topic =>
+      topic.id === topicId ? { ...topic, skipped: false } : topic
+    );
+
+    updateSession(sessionId, { topics: updatedTopics });
+    setToast({ message: `"${topicTitle}" restored to path`, type: 'success' });
+  };
 
   useDocumentTitle(pathData?.title || 'Learning Path');
 
@@ -195,19 +229,22 @@ export default function LearningPathDetail() {
           {pathData.items.map((item, index) => (
             <StaggeredItem key={item.id} index={index} baseDelay={50} staggerDelay={30}>
               <Card
-                className={`cursor-pointer transition-all hover:shadow-brutal ${
-                  item.completed ? 'border-success/50 bg-success/5' : ''
+                className={`transition-all hover:shadow-brutal ${
+                  item.completed ? 'border-success/50 bg-success/5' :
+                  item.skipped ? 'border-text/20 bg-text/5 opacity-60' : ''
                 }`}
-                onClick={() => navigate(`/session/${item.sessionId}/notes`)}
               >
                 <div className="flex items-start gap-4">
                   {/* Thumbnail */}
-                  <div className="w-24 h-16 flex-shrink-0 bg-border/20 border-2 border-border overflow-hidden">
+                  <div
+                    className="w-24 h-16 flex-shrink-0 bg-border/20 border-2 border-border overflow-hidden cursor-pointer"
+                    onClick={() => navigate(`/session/${item.sessionId}/notes`)}
+                  >
                     {item.videoThumbnail ? (
                       <img
                         src={item.videoThumbnail}
                         alt=""
-                        className="w-full h-full object-cover"
+                        className={`w-full h-full object-cover ${item.skipped ? 'grayscale' : ''}`}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
@@ -219,8 +256,11 @@ export default function LearningPathDetail() {
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-heading font-bold text-text truncate">
+                      <div
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => navigate(`/session/${item.sessionId}/notes`)}
+                      >
+                        <h3 className={`font-heading font-bold truncate ${item.skipped ? 'text-text/50 line-through' : 'text-text'}`}>
                           {item.title}
                         </h3>
                         <p className="text-sm text-text/70 truncate mt-1">
@@ -231,9 +271,14 @@ export default function LearningPathDetail() {
                         </p>
                       </div>
 
-                      {/* Status */}
-                      <div className="flex-shrink-0">
-                        {item.completed ? (
+                      {/* Status and Skip Button */}
+                      <div className="flex-shrink-0 flex flex-col items-end gap-2">
+                        {item.skipped ? (
+                          <span className="flex items-center gap-1 px-2 py-1 text-xs font-bold bg-text/10 text-text/50 border border-border">
+                            <span className="material-icons text-sm" aria-hidden="true">block</span>
+                            Skipped
+                          </span>
+                        ) : item.completed ? (
                           <span className="flex items-center gap-1 px-2 py-1 text-xs font-bold bg-success/20 text-success border border-success/30">
                             <span className="material-icons text-sm" aria-hidden="true">check</span>
                             Done
@@ -249,22 +294,49 @@ export default function LearningPathDetail() {
                             Pending
                           </span>
                         )}
+
+                        {/* Skip/Unskip Button */}
+                        {!item.completed && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (item.skipped) {
+                                handleUnskipTopic(item.sessionId, item.topicId, item.title);
+                              } else {
+                                handleSkipTopic(item.sessionId, item.topicId, item.title);
+                              }
+                            }}
+                            className={`flex items-center gap-1 px-2 py-1 text-xs font-semibold border border-border transition-colors ${
+                              item.skipped
+                                ? 'bg-primary/10 hover:bg-primary/20 text-primary'
+                                : 'bg-surface hover:bg-text/10 text-text/60'
+                            }`}
+                            aria-label={item.skipped ? `Restore ${item.title}` : `Skip ${item.title}`}
+                          >
+                            <span className="material-icons text-sm" aria-hidden="true">
+                              {item.skipped ? 'undo' : 'skip_next'}
+                            </span>
+                            {item.skipped ? 'Restore' : 'Skip'}
+                          </button>
+                        )}
                       </div>
                     </div>
 
                     {/* Progress bar */}
-                    <div className="mt-3">
-                      <div className="flex justify-between text-xs text-text/60 mb-1">
-                        <span>{item.questionsAnswered}/{item.questionsTotal} questions</span>
-                        <span>{Math.round((item.questionsAnswered / Math.max(item.questionsTotal, 1)) * 100)}%</span>
+                    {!item.skipped && (
+                      <div className="mt-3">
+                        <div className="flex justify-between text-xs text-text/60 mb-1">
+                          <span>{item.questionsAnswered}/{item.questionsTotal} questions</span>
+                          <span>{Math.round((item.questionsAnswered / Math.max(item.questionsTotal, 1)) * 100)}%</span>
+                        </div>
+                        <div className="h-1.5 bg-border/20 border border-border overflow-hidden">
+                          <div
+                            className={`h-full transition-all ${item.completed ? 'bg-success' : 'bg-primary'}`}
+                            style={{ width: `${(item.questionsAnswered / Math.max(item.questionsTotal, 1)) * 100}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="h-1.5 bg-border/20 border border-border overflow-hidden">
-                        <div
-                          className={`h-full transition-all ${item.completed ? 'bg-success' : 'bg-primary'}`}
-                          style={{ width: `${(item.questionsAnswered / Math.max(item.questionsTotal, 1)) * 100}%` }}
-                        />
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -280,7 +352,7 @@ export default function LearningPathDetail() {
             <h3 className="font-heading font-bold text-text">Continue Learning</h3>
             <p className="text-sm text-text/70">
               {pathData.progress < 100
-                ? `You have ${pathData.totalItems - pathData.completedItems} topics left to complete`
+                ? `You have ${pathData.totalItems - pathData.completedItems - pathData.skippedItems} topics left to complete${pathData.skippedItems > 0 ? ` (${pathData.skippedItems} skipped)` : ''}`
                 : 'Congratulations! You completed this learning path'}
             </p>
           </div>
@@ -296,6 +368,15 @@ export default function LearningPathDetail() {
           </div>
         </div>
       </Card>
+
+      {/* Toast notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }
