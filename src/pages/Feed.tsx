@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Toast from '../components/ui/Toast';
+import EmptyState from '../components/ui/EmptyState';
 import { FeedChannelSkeleton } from '../components/ui/Skeleton';
 import { StaggeredItem } from '../components/ui/StaggeredList';
 import { useAuthStore } from '../stores/authStore';
@@ -82,15 +83,21 @@ export default function Feed() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to fetch feed');
+        // Try to parse JSON error, but handle non-JSON responses gracefully
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          throw new Error(data.message || 'Failed to fetch feed');
+        } else {
+          throw new Error(`Server error (${response.status}). Please try again.`);
+        }
       }
 
       const data = await response.json();
       setFeedData(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load feed');
-      setToast({ message: 'Failed to load feed', type: 'error' });
+      setError(err instanceof Error ? err.message : 'Connection lost. Please try again.');
+      setToast({ message: 'Connection lost. Retrying...', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -465,31 +472,30 @@ export default function Feed() {
 
       {/* Empty State */}
       {!hasFollowedChannels && (
-        <Card className="text-center py-12 max-w-2xl mx-auto">
-          <div className="space-y-4">
-            <svg
-              className="w-16 h-16 mx-auto text-text/30"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-              />
-            </svg>
-            <h3 className="font-heading text-xl font-bold text-text">
-              No followed channels yet
-            </h3>
-            <p className="text-text/70 max-w-md mx-auto">
-              When you complete learning sessions, you can follow the channel to see more videos from them in your feed.
-            </p>
-            <Button onClick={() => navigate('/')}>
-              Start a Learning Session
-            </Button>
-          </div>
+        <Card className="max-w-2xl mx-auto">
+          <EmptyState
+            icon={
+              <svg
+                className="w-16 h-16"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                />
+              </svg>
+            }
+            title="No content yet"
+            description="Your feed will show content as you learn."
+            action={{
+              label: "Start Learning",
+              onClick: () => navigate('/', { state: { newSession: true } }),
+            }}
+          />
         </Card>
       )}
 
@@ -521,7 +527,7 @@ export default function Feed() {
                 New videos from these channels will appear here. Videos you've already watched ({feedData.watchedVideoIds.length}) are automatically excluded.
               </p>
               <div className="mt-4">
-                <Button onClick={() => navigate('/')} variant="primary">
+                <Button onClick={() => navigate('/', { state: { newSession: true } })} variant="primary">
                   Start New Session
                 </Button>
               </div>

@@ -31,7 +31,6 @@ interface SidebarItem {
 }
 
 const navItems: SidebarItem[] = [
-  { to: '/', icon: 'home', label: 'Home' },
   { to: '/dashboard', icon: 'dashboard', label: 'Dashboard', requiresAuth: true },
   { to: '/feed', icon: 'subscriptions', label: 'Your Feed', requiresAuth: true },
   { to: '/library', icon: 'video_library', label: 'Library', requiresAuth: true },

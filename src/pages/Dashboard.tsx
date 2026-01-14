@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import ProgressBar from '../components/ui/ProgressBar';
 import StaggeredList, { StaggeredItem } from '../components/ui/StaggeredList';
 import LearningPathCard, { type LearningPathData } from '../components/ui/LearningPathCard';
+import EmptyState from '../components/ui/EmptyState';
 import { useAuthStore } from '../stores/authStore';
 import { useSessionStore } from '../stores/sessionStore';
 import { useCommitment, useLearningInsights, useDueTopics, useDocumentTitle } from '../hooks';
+import { getGreeting } from '../utils/greeting';
 
 type ChartView = 'week' | 'month';
 
@@ -25,6 +27,14 @@ export default function Dashboard() {
   const [chartView, setChartView] = useState<ChartView>('week');
 
   const isPro = user?.tier === 'PRO';
+
+  // Generate personalized greeting
+  const greeting = useMemo(() => {
+    const isFirstVisit = library.sessions.length === 0;
+    // Use browser timezone for now (could fetch from user preferences)
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return getGreeting(user?.displayName, timezone, undefined, isFirstVisit);
+  }, [user?.displayName, library.sessions.length]);
 
   // Use TanStack Query hooks for data fetching
   const {
@@ -98,18 +108,18 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* Header with Personalized Greeting */}
       <div className="text-center space-y-2">
         <h1 className="font-heading text-3xl sm:text-4xl font-bold text-text">
-          Dashboard
+          {greeting}
         </h1>
         <p className="font-body text-lg text-text/70">
           Track your learning progress and daily commitment
         </p>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {/* Main Content Grid - responsive to larger screens */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
         {/* Daily Commitment Widget */}
         <Card className="md:col-span-2 lg:col-span-1">
           <div className="space-y-4">
@@ -264,7 +274,7 @@ export default function Dashboard() {
             </h2>
             <div className="space-y-2">
               <button
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/', { state: { newSession: true } })}
                 className="w-full px-4 py-3 font-heading font-semibold text-left bg-primary border-3 border-border shadow-brutal hover:shadow-brutal-hover transition-all"
               >
                 Start New Session
@@ -317,23 +327,19 @@ export default function Dashboard() {
         if (library.sessions.length === 0) {
           return (
             <Card>
-              <div className="space-y-4 text-center py-6">
-                <span className="material-icons text-6xl text-text/30" aria-hidden="true">
-                  play_circle_outline
-                </span>
-                <h2 className="font-heading text-xl font-bold text-text">
-                  Start Your Learning Journey
-                </h2>
-                <p className="text-text/70 max-w-md mx-auto">
-                  Complete your first learning session to unlock personalized recommendations based on your interests.
-                </p>
-                <button
-                  onClick={() => navigate('/')}
-                  className="mt-4 px-6 py-3 font-heading font-bold bg-primary border-3 border-border shadow-brutal hover:shadow-brutal-hover transition-all"
-                >
-                  Start First Session
-                </button>
-              </div>
+              <EmptyState
+                icon={
+                  <span className="material-icons text-6xl" aria-hidden="true">
+                    play_circle_outline
+                  </span>
+                }
+                title="No sessions yet"
+                description="Start your first learning session to see your progress here."
+                action={{
+                  label: "Start Learning",
+                  onClick: () => navigate('/', { state: { newSession: true } }),
+                }}
+              />
             </Card>
           );
         }
@@ -355,7 +361,7 @@ export default function Dashboard() {
               <p className="text-sm text-text/70">
                 Pick up where you left off with these creators
               </p>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {seriesChannels.map((channelData, index) => {
                   const mostRecentSession = channelData.sessions.sort(
                     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -656,7 +662,7 @@ export default function Dashboard() {
               <p className="text-sm text-text/70">
                 Your personalized learning journeys based on topics you've studied
               </p>
-              <div className="grid gap-4 md:grid-cols-2" role="list" aria-labelledby="learning-paths-heading">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" role="list" aria-labelledby="learning-paths-heading">
                 {learningPaths.map((path) => (
                   <div key={path.id} role="listitem">
                     <LearningPathCard
@@ -1233,7 +1239,7 @@ export default function Dashboard() {
               <p className="text-sm text-text/70">
                 Continue learning from creators you've enjoyed
               </p>
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {recommendations.map((rec, index) => (
                   <div
                     key={index}
@@ -1287,7 +1293,7 @@ export default function Dashboard() {
             </button>
           </div>
 
-          <StaggeredList className="grid gap-4 md:grid-cols-3">
+          <StaggeredList className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {recentSessions.map((session, index) => (
               <StaggeredItem key={session.id} index={index}>
                 <Card
@@ -1324,44 +1330,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Empty State when no sessions */}
-      {recentSessions.length === 0 && (
-        <Card className="text-center py-12">
-          <div className="space-y-4">
-            <svg
-              className="w-16 h-16 mx-auto text-text/30"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <h3 className="font-heading text-xl font-bold text-text">
-              No sessions yet
-            </h3>
-            <p className="text-text/70">
-              Start your learning journey by creating your first session!
-            </p>
-            <button
-              onClick={() => navigate('/')}
-              className="mt-4 px-6 py-3 font-heading font-bold bg-primary border-3 border-border shadow-brutal hover:shadow-brutal-hover transition-all"
-            >
-              Create First Session
-            </button>
-          </div>
-        </Card>
-      )}
     </div>
   );
 }

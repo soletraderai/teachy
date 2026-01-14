@@ -7,6 +7,7 @@ import Toast from '../components/ui/Toast';
 import ProgressBar from '../components/ui/ProgressBar';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useSessionStore } from '../stores/sessionStore';
+import { useAuthStore } from '../stores/authStore';
 import { createSession } from '../services/session';
 import { RateLimitError } from '../services/gemini';
 import { useOnlineStatus, useDocumentTitle } from '../hooks';
@@ -25,7 +26,19 @@ export default function Home() {
   const location = useLocation();
   const { isConfigured } = useSettingsStore();
   const { library, createSession: saveSession } = useSessionStore();
+  const { isAuthenticated } = useAuthStore();
   const isOnline = useOnlineStatus();
+
+  // Redirect logged-in users to Dashboard (unless explicitly starting a new session)
+  useEffect(() => {
+    const state = location.state as { videoUrl?: string; autoStart?: boolean; newSession?: boolean } | null;
+    // Don't redirect if:
+    // - Coming from Feed with a video to start (autoStart)
+    // - Explicitly starting a new session (newSession)
+    if (!state?.autoStart && !state?.newSession && isAuthenticated()) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, navigate, location.state]);
 
   // Get recent sessions (last 5)
   const recentSessions = library.sessions.slice(0, 5);

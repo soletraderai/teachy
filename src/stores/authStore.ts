@@ -137,17 +137,27 @@ if (isSupabaseConfigured()) {
   supabase.auth.onAuthStateChange(async (event, session) => {
     const store = useAuthStore.getState();
 
-    if (event === 'SIGNED_IN' && session) {
+    // Handle INITIAL_SESSION (page load with persisted session) and SIGNED_IN
+    if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
       store.setSupabaseSession(session);
       store.setAccessToken(session.access_token);
 
-      // Fetch user from backend
+      // Fetch user from backend to get fresh tier data
       try {
         const backendUser = await authApi.getMe();
         store.setUser(supabaseUserToAuthUser(session.user, backendUser));
-      } catch {
+      } catch (error) {
+        console.warn('Failed to fetch user from backend:', error);
         store.setUser(supabaseUserToAuthUser(session.user));
       }
+
+      // Sync session data from cloud after authentication
+      // Import dynamically to avoid circular dependency
+      import('./sessionStore').then(({ useSessionStore }) => {
+        useSessionStore.getState().syncWithCloud();
+      }).catch(err => {
+        console.warn('Failed to sync sessions from cloud:', err);
+      });
     } else if (event === 'SIGNED_OUT') {
       store.setUser(null);
       store.setAccessToken(null);
@@ -155,6 +165,14 @@ if (isSupabaseConfigured()) {
     } else if (event === 'TOKEN_REFRESHED' && session) {
       store.setSupabaseSession(session);
       store.setAccessToken(session.access_token);
+
+      // Also refresh user data on token refresh to keep tier in sync
+      try {
+        const backendUser = await authApi.getMe();
+        store.setUser(supabaseUserToAuthUser(session.user, backendUser));
+      } catch {
+        // Keep existing user data if refresh fails
+      }
     }
   });
 }
