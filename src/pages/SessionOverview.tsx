@@ -207,6 +207,7 @@ export default function SessionOverview() {
             <button
               onClick={expandedTopics.size === session.topics.length ? handleCollapseAll : handleExpandAll}
               className="px-3 py-2 text-sm font-heading border-2 border-border bg-surface hover:bg-primary/10 transition-colors"
+              aria-label={expandedTopics.size === session.topics.length ? 'Collapse all topic previews' : 'Expand all topic previews'}
             >
               {expandedTopics.size === session.topics.length ? 'Collapse All' : 'Expand All'}
             </button>

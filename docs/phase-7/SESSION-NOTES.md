@@ -216,11 +216,126 @@ Phase 7 - Session Experience & Question Quality Overhaul: Implementing three-tie
 
 ---
 
+## Session 2: 2026-01-15 (Post-Testing Fixes)
+
+### Focus
+Phase 7.6 - Post-Testing Fixes: Addressing 7 issues identified during manual testing.
+
+### Issues Fixed
+
+#### Issue 1: Question Generation Quality - COMPLETE
+**Problem:** Questions were generic and testing application instead of understanding.
+
+**Changes Made:**
+- Updated `generateTopicsFromVideo()` prompt to focus on COMPREHENSION, not application
+- Added BANNED QUESTION PATTERNS section with explicit prohibitions
+- Added explicit instruction: "Questions must test understanding of the content, NOT how the user would apply it"
+- Rewrote all fallback questions to test understanding, not application
+- File: `src/services/gemini.ts`
+
+#### Issue 2: Code Editor Visibility (F1) - COMPLETE
+**Problem:** Code editor appeared on non-code questions.
+
+**Changes Made:**
+- Changed conditional from `(currentQuestion.isCodeQuestion || currentTopic.codeExample)` to `currentQuestion.isCodeQuestion === true`
+- Removed legacy `currentTopic.codeExample` fallback
+- File: `src/pages/ActiveSession.tsx`
+
+#### Issue 3: Help Panel Transcript (F2) - COMPLETE
+**Problem:** No transcript showing in help panel.
+
+**Changes Made:**
+- Video Context section now always shows if `videoUrl` exists
+- Added fallback UI: "Transcript not available for this video. Watch the video directly for context."
+- "Watch on YouTube" button always available regardless of transcript availability
+- File: `src/components/ui/HelpPanel.tsx`
+
+#### Issue 4: Topic Summary Position & Design (F5) - COMPLETE
+**Problem:** Topic summary in wrong position and using dropdown instead of clickable text.
+
+**Changes Made:**
+- Moved topic summary trigger to Progress Header card (below topic title, above progress bar)
+- Redesigned from bordered dropdown to inline clickable text with chevron
+- Text changes from "What's this topic about?" to "Hide topic overview"
+- Added smooth height/opacity animation with AnimatePresence
+- File: `src/pages/ActiveSession.tsx`
+
+#### Issue 5: Timestamps Not Working (F6) - COMPLETE
+**Problem:** Timestamps not displaying on fallback topics.
+
+**Changes Made:**
+- Created `addTimestamps()` helper function in `generateFallbackTopics()`
+- Calculates timestamps based on video duration / number of topics
+- Also sets `sectionName` from topic title
+- Applied to both long video and short video fallback topics
+- File: `src/services/gemini.ts`
+
+#### Issue 6: Color Contrast & Success Styling - COMPLETE
+**Problem:** Green text on green background hard to read.
+
+**Changes Made:**
+- Separated `iconColor` (theme color: green/red/yellow) from `titleColor` (dark text)
+- Updated `resultConfig` to use `text-text` for title text (readable)
+- Icons keep semantic colors, titles use dark text for contrast
+- File: `src/components/ui/EvaluationFeedback.tsx`
+
+#### Issue 7: Keyboard Navigation - COMPLETE
+**Problem:** Keyboard navigation needed testing and ARIA improvements.
+
+**Audit Results:**
+- Global `focus-visible` styles properly implemented in `index.css` (lines 98-119)
+- Button component has focus ring styling
+
+**Changes Made:**
+- Added `aria-expanded` and `aria-controls` to Sources panel button
+- Added `id` to sources content panel for proper association
+- Added `aria-label` to Expand/Collapse All button in SessionOverview
+- Files: `src/pages/ActiveSession.tsx`, `src/pages/SessionOverview.tsx`
+
+### Testing Results
+
+| Test Case | Status | Notes |
+|-----------|--------|-------|
+| TypeScript compilation | PASSED | No type errors |
+| Vite production build | PASSED | Built successfully |
+| Login flow | PASSED | Works after clearing stale localStorage |
+| Question generation (fallback) | PASSED | Questions now test comprehension |
+| Code editor visibility | PASSED | Only shows when isCodeQuestion === true |
+| Help panel fallback UI | PASSED | Shows "Watch on YouTube" when no transcript |
+| Topic summary position | PASSED | Now in Progress Header card |
+| Timestamp display | PASSED | Fallback topics have calculated timestamps |
+| Color contrast | PASSED | Title text uses dark color for readability |
+| Keyboard navigation | PASSED | ARIA attributes added, focus visible |
+
+### Session Summary
+
+**Status:** COMPLETE
+
+**All 7 Issues Resolved:**
+1. ✓ Question Generation Quality
+2. ✓ Code Editor Visibility
+3. ✓ Help Panel Transcript
+4. ✓ Topic Summary Position & Design
+5. ✓ Timestamps Not Working
+6. ✓ Color Contrast & Success Styling
+7. ✓ Keyboard Navigation
+
+**Files Modified:**
+- `src/services/gemini.ts` - Question generation prompts, fallback topics, timestamps
+- `src/pages/ActiveSession.tsx` - Code editor conditional, topic summary, ARIA attributes
+- `src/components/ui/HelpPanel.tsx` - Fallback UI for transcript
+- `src/components/ui/EvaluationFeedback.tsx` - Color contrast fix
+- `src/pages/SessionOverview.tsx` - ARIA label for expand/collapse
+- `docs/phase-7/phase-7-tasks.md` - Updated task tracking
+
+---
+
 ## Related Documents
 
 | Document | Purpose | Status |
 |----------|---------|--------|
 | `README.md` | Workflow guide | Reference |
 | `phase-7-tasks.md` | Task specifications | Complete |
+| `phase-7-tests.md` | Manual test results | Complete |
 | `phase-7-implementation-plan.md` | Implementation strategy | Complete |
 | `/.claude/plans/composed-doodling-flamingo.md` | Detailed plan | Complete |

@@ -485,6 +485,41 @@ export default function ActiveSession() {
               Topic {currentTopicIndex + 1} of {totalTopics}
             </h1>
             <p className="text-sm text-text/70">{currentTopic.title}</p>
+
+            {/* Phase 7.6 F5: Topic Summary - Redesigned as clickable text */}
+            <button
+              onClick={() => setIsTopicSummaryExpanded(!isTopicSummaryExpanded)}
+              className="mt-2 flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors group"
+              aria-expanded={isTopicSummaryExpanded}
+              aria-controls="topic-summary-content"
+            >
+              <motion.span
+                animate={{ rotate: isTopicSummaryExpanded ? 90 : 0 }}
+                transition={{ duration: 0.15 }}
+                className="inline-block"
+              >
+                <MaterialIcon name="chevron_right" size="sm" className="text-primary" />
+              </motion.span>
+              <span className="group-hover:underline">
+                {isTopicSummaryExpanded ? "Hide topic overview" : "What's this topic about?"}
+              </span>
+            </button>
+            <AnimatePresence>
+              {isTopicSummaryExpanded && (
+                <motion.div
+                  id="topic-summary-content"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <p className="mt-2 text-sm text-text/80 pl-6 pr-2 border-l-2 border-primary/30">
+                    {currentTopic.summary}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           <div className="flex items-center gap-3">
@@ -532,6 +567,8 @@ export default function ActiveSession() {
           <button
             onClick={() => setIsSourcesExpanded(!isSourcesExpanded)}
             className="w-full flex items-center justify-between p-0 text-left"
+            aria-expanded={isSourcesExpanded}
+            aria-controls="sources-panel-content"
           >
             <div className="flex items-center gap-2">
               <svg
@@ -559,7 +596,7 @@ export default function ActiveSession() {
           </button>
 
           {isSourcesExpanded && (
-            <div className="mt-4 space-y-3 border-t-2 border-border pt-4">
+            <div id="sources-panel-content" className="mt-4 space-y-3 border-t-2 border-border pt-4">
               {session.knowledgeBase.sources.map((source, index) => {
                 const sourceType = sourceTypeIcons[source.type] || sourceTypeIcons.other;
                 const urlValid = isValidUrl(source.url);
@@ -674,47 +711,6 @@ export default function ActiveSession() {
                 </div>
               )}
 
-              {/* Phase 7 F5: Expandable Topic Summary */}
-              <div className="border-2 border-border rounded-lg overflow-hidden">
-                <button
-                  onClick={() => setIsTopicSummaryExpanded(!isTopicSummaryExpanded)}
-                  className="w-full flex items-center justify-between p-3 bg-surface/50 hover:bg-surface transition-colors"
-                  aria-expanded={isTopicSummaryExpanded}
-                  aria-controls="topic-summary"
-                >
-                  <span className="text-sm font-medium text-text/80">
-                    {isTopicSummaryExpanded ? 'Hide topic context' : 'Show topic context'}
-                  </span>
-                  <motion.svg
-                    animate={{ rotate: isTopicSummaryExpanded ? 180 : 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="w-4 h-4 text-text/60"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </motion.svg>
-                </button>
-                <AnimatePresence>
-                  {isTopicSummaryExpanded && (
-                    <motion.div
-                      id="topic-summary"
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="p-3 border-t-2 border-border">
-                        <p className="text-sm text-text/80">{currentTopic.summary}</p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
               <div>
                 <h2 className="font-heading text-lg font-bold text-text mb-2">
                   Question
@@ -722,20 +718,20 @@ export default function ActiveSession() {
                 <p className="text-text text-lg">{currentQuestion.text}</p>
               </div>
 
-            {/* Phase 7 F1: Code Editor for code questions OR legacy programming topics */}
-            {(currentQuestion.isCodeQuestion || currentTopic.codeExample) && (
+            {/* Phase 7.6 F1: Code Editor ONLY for explicit code questions (isCodeQuestion === true) */}
+            {currentQuestion.isCodeQuestion === true && (
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-heading font-semibold text-text flex items-center gap-2">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                     </svg>
-                    {/* F1: Show "Code Challenge" for code questions, "Code Example" for legacy */}
-                    {currentQuestion.isCodeQuestion ? 'Code Challenge' : 'Code Example'}
-                    {['javascript', 'typescript', 'python'].includes(currentQuestion.codeChallenge?.language || currentTopic.codeLanguage || '') && (
+                    {/* F1: Code Challenge header for code questions */}
+                    Code Challenge
+                    {['javascript', 'typescript', 'python'].includes(currentQuestion.codeChallenge?.language || '') && (
                       <span className="text-xs text-text/60 font-normal ml-2">(Click Run to execute)</span>
                     )}
-                    {['html', 'css'].includes(currentQuestion.codeChallenge?.language || currentTopic.codeLanguage || '') && (
+                    {['html', 'css'].includes(currentQuestion.codeChallenge?.language || '') && (
                       <span className="text-xs text-text/60 font-normal ml-2">(Live Preview)</span>
                     )}
                   </h3>
@@ -754,10 +750,10 @@ export default function ActiveSession() {
                 </div>
                 {showCodeEditor && (
                   <>
-                    {/* F1: Use code challenge template if available, otherwise fallback to topic code example */}
+                    {/* F1: Use code challenge from question */}
                     {(() => {
-                      const codeToUse = currentQuestion.codeChallenge?.template || currentTopic.codeExample || '';
-                      const languageToUse = currentQuestion.codeChallenge?.language || currentTopic.codeLanguage || 'javascript';
+                      const codeToUse = currentQuestion.codeChallenge?.template || '';
+                      const languageToUse = currentQuestion.codeChallenge?.language || 'javascript';
                       return (['javascript', 'typescript', 'python', 'html', 'css'].includes(languageToUse)) ? (
                       <CodePlayground
                         initialCode={codeToUse}

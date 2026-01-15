@@ -281,6 +281,7 @@ function generateFallbackTopics(metadata: VideoMetadata): { topics: Topic[]; est
   const videoTitle = metadata.title;
   const isLongVideo = isLongVideoFromTitle(videoTitle);
   const detectedLanguage = detectProgrammingLanguage(videoTitle);
+  const videoDuration = metadata.duration || 600; // Default 10 minutes
 
   // Helper to add code example to topic if programming tutorial
   const addCodeExample = (topic: Topic, topicTitle: string): Topic => {
@@ -293,16 +294,28 @@ function generateFallbackTopics(metadata: VideoMetadata): { topics: Topic[]; est
     return topic;
   };
 
+  // Phase 7.6: Helper to add timestamps to topics based on video duration
+  const addTimestamps = (topics: Topic[]): Topic[] => {
+    const topicDuration = videoDuration / topics.length;
+    return topics.map((topic, index) => ({
+      ...topic,
+      timestampStart: Math.floor(index * topicDuration),
+      timestampEnd: Math.floor((index + 1) * topicDuration),
+      sectionName: topic.title,
+    }));
+  };
+
   // For long videos/courses, generate more comprehensive topics (5-7 topics, 2-3 questions each = 12-21 questions)
+  // Phase 7.6: Updated to focus on COMPREHENSION, not application
   if (isLongVideo) {
     const rawTopics: Topic[] = [
       {
         id: generateId(),
         title: `Introduction and Overview`,
-        summary: `This topic covers the fundamental concepts introduced in "${videoTitle}". Understanding these basics will help you grasp the more advanced concepts discussed later.`,
+        summary: `This topic covers the fundamental concepts introduced in "${videoTitle}". Pay attention to how the instructor defines key terms and sets up the learning objectives.`,
         questions: [
-          createQuestion(`What do you think is the main purpose or goal of "${videoTitle}"?`),
-          createQuestion(`What prior knowledge or prerequisites might be helpful before starting this course?`),
+          createQuestion(`What are the main topics or concepts that the instructor says will be covered in "${videoTitle}"?`),
+          createQuestion(`How does the instructor define the key terms introduced at the beginning?`),
         ],
         digDeeperConversation: null,
         bookmarked: false,
@@ -312,10 +325,10 @@ function generateFallbackTopics(metadata: VideoMetadata): { topics: Topic[]; est
       {
         id: generateId(),
         title: `Core Fundamentals`,
-        summary: `This section explores the foundational concepts that form the building blocks of the subject. Mastering these fundamentals is essential for understanding advanced topics.`,
+        summary: `This section explores the foundational concepts that form the building blocks of the subject. These are the essential ideas that everything else is built upon.`,
         questions: [
-          createQuestion(`What are the core fundamental concepts introduced in the early part of this course?`),
-          createQuestion(`Why is it important to understand these fundamentals before moving forward?`),
+          createQuestion(`What fundamental concepts does the instructor explain as the foundation for this topic?`),
+          createQuestion(`What examples or analogies does the instructor use to explain these core concepts?`),
         ],
         digDeeperConversation: null,
         bookmarked: false,
@@ -324,11 +337,11 @@ function generateFallbackTopics(metadata: VideoMetadata): { topics: Topic[]; est
       },
       {
         id: generateId(),
-        title: `Intermediate Concepts`,
-        summary: `Building on the fundamentals, this section introduces more complex ideas and techniques that bridge basic understanding with advanced applications.`,
+        title: `Key Concepts Explained`,
+        summary: `This section dives deeper into the main ideas, explaining how they work and why they matter within the context of the subject.`,
         questions: [
-          createQuestion(`How do the intermediate concepts build upon the fundamentals you learned earlier?`),
-          createQuestion(`What challenges might you face when learning these intermediate topics?`),
+          createQuestion(`What are the key differences between the main concepts explained in this section?`),
+          createQuestion(`According to the video, what is the relationship between these concepts?`),
         ],
         digDeeperConversation: null,
         bookmarked: false,
@@ -337,11 +350,11 @@ function generateFallbackTopics(metadata: VideoMetadata): { topics: Topic[]; est
       },
       {
         id: generateId(),
-        title: `Advanced Topics`,
-        summary: `This section covers advanced concepts and techniques that require a solid understanding of the fundamentals and intermediate material.`,
+        title: `Detailed Explanations`,
+        summary: `This section provides in-depth explanations of how things work, including any technical details or nuances the instructor highlights.`,
         questions: [
-          createQuestion(`What advanced topics does this course cover and why are they important?`),
-          createQuestion(`How do the advanced concepts relate to real-world professional applications?`),
+          createQuestion(`What specific details or nuances does the instructor emphasize about this topic?`),
+          createQuestion(`What warnings or common mistakes does the instructor mention to avoid?`),
         ],
         digDeeperConversation: null,
         bookmarked: false,
@@ -350,11 +363,11 @@ function generateFallbackTopics(metadata: VideoMetadata): { topics: Topic[]; est
       },
       {
         id: generateId(),
-        title: `Best Practices and Patterns`,
-        summary: `Learn about industry best practices, common patterns, and professional guidelines that help you write better, more maintainable solutions.`,
+        title: `Examples and Demonstrations`,
+        summary: `The instructor demonstrates concepts through examples, showing how they work in practice and what outcomes to expect.`,
         questions: [
-          createQuestion(`What best practices should you follow when applying what you've learned?`),
-          createQuestion(`Why are coding patterns and best practices important in professional work?`),
+          createQuestion(`What specific examples does the instructor walk through in this section?`),
+          createQuestion(`What results or outcomes does the instructor show when demonstrating these concepts?`),
         ],
         digDeeperConversation: null,
         bookmarked: false,
@@ -363,11 +376,11 @@ function generateFallbackTopics(metadata: VideoMetadata): { topics: Topic[]; est
       },
       {
         id: generateId(),
-        title: `Practical Projects`,
-        summary: `Apply your knowledge through hands-on projects and exercises. Building real projects solidifies understanding and builds your portfolio.`,
+        title: `Important Considerations`,
+        summary: `The instructor covers important factors, edge cases, or special considerations that affect how these concepts work.`,
         questions: [
-          createQuestion(`What types of projects could you build using the skills from this course?`),
-          createQuestion(`How would you approach planning and building a project from scratch?`),
+          createQuestion(`What important considerations or limitations does the instructor mention?`),
+          createQuestion(`What edge cases or special scenarios does the instructor address?`),
         ],
         digDeeperConversation: null,
         bookmarked: false,
@@ -376,11 +389,11 @@ function generateFallbackTopics(metadata: VideoMetadata): { topics: Topic[]; est
       },
       {
         id: generateId(),
-        title: `Next Steps and Resources`,
-        summary: `Explore what to learn next after completing this course. Identify additional resources, communities, and advanced topics to continue your learning journey.`,
+        title: `Summary and Key Takeaways`,
+        summary: `The instructor summarizes the main points and highlights the most important things to remember from the content.`,
         questions: [
-          createQuestion(`What should you focus on learning after completing this course?`),
-          createQuestion(`What resources or communities would you recommend for continued learning?`),
+          createQuestion(`What does the instructor identify as the most important takeaways from this content?`),
+          createQuestion(`How does the instructor summarize the main points at the end?`),
         ],
         digDeeperConversation: null,
         bookmarked: false,
@@ -389,8 +402,9 @@ function generateFallbackTopics(metadata: VideoMetadata): { topics: Topic[]; est
       },
     ];
 
-    // Apply code examples to each topic for programming tutorials
-    const topics = rawTopics.map(t => addCodeExample(t, t.title));
+    // Apply code examples and timestamps to each topic for programming tutorials
+    const topicsWithCode = rawTopics.map(t => addCodeExample(t, t.title));
+    const topics = addTimestamps(topicsWithCode);
 
     return {
       topics,
@@ -399,14 +413,15 @@ function generateFallbackTopics(metadata: VideoMetadata): { topics: Topic[]; est
   }
 
   // Standard fallback for shorter videos (3 topics, 2 questions each = 6 questions)
+  // Phase 7.6: Updated to focus on COMPREHENSION, not application
   const rawTopics: Topic[] = [
     {
       id: generateId(),
       title: `Introduction to ${videoTitle}`,
-      summary: `This topic covers the fundamental concepts introduced in "${videoTitle}". Understanding these basics will help you grasp the more advanced concepts discussed later.`,
+      summary: `This topic covers the fundamental concepts introduced in "${videoTitle}". Pay attention to how the speaker introduces and defines the main subject.`,
       questions: [
-        createQuestion(`What do you think is the main purpose or message of "${videoTitle}"?`),
-        createQuestion(`What prior knowledge might be helpful before watching this video?`),
+        createQuestion(`What is the main topic or subject that the speaker introduces in "${videoTitle}"?`),
+        createQuestion(`How does the speaker define or describe the key concept at the beginning?`),
       ],
       digDeeperConversation: null,
       bookmarked: false,
@@ -415,11 +430,11 @@ function generateFallbackTopics(metadata: VideoMetadata): { topics: Topic[]; est
     },
     {
       id: generateId(),
-      title: `Key Concepts`,
-      summary: `This section explores the main ideas and concepts presented in the video. These are the building blocks that form the foundation of the topic.`,
+      title: `Key Concepts Explained`,
+      summary: `This section explores the main ideas and concepts presented in the video. Focus on the specific explanations and examples the speaker provides.`,
       questions: [
-        createQuestion(`What are the most important concepts or ideas you learned from this video?`),
-        createQuestion(`How would you explain these concepts to someone who hasn't seen the video?`),
+        createQuestion(`What are the key concepts or main points that the speaker explains in this video?`),
+        createQuestion(`What examples or explanations does the speaker use to illustrate these concepts?`),
       ],
       digDeeperConversation: null,
       bookmarked: false,
@@ -428,11 +443,11 @@ function generateFallbackTopics(metadata: VideoMetadata): { topics: Topic[]; est
     },
     {
       id: generateId(),
-      title: `Practical Applications`,
-      summary: `Learn how the concepts from this video can be applied in real-world scenarios. Understanding practical applications helps reinforce learning and shows the relevance of the material.`,
+      title: `Details and Takeaways`,
+      summary: `The speaker covers important details and summarizes the key takeaways. Pay attention to any specific advice, warnings, or conclusions mentioned.`,
       questions: [
-        createQuestion(`How might you apply what you've learned from this video in your daily life or work?`),
-        createQuestion(`Can you think of any examples where these concepts have been applied successfully?`),
+        createQuestion(`What specific details or important points does the speaker emphasize?`),
+        createQuestion(`What conclusions or key takeaways does the speaker mention at the end?`),
       ],
       digDeeperConversation: null,
       bookmarked: false,
@@ -441,8 +456,9 @@ function generateFallbackTopics(metadata: VideoMetadata): { topics: Topic[]; est
     },
   ];
 
-  // Apply code examples to each topic for programming tutorials
-  const topics = rawTopics.map(t => addCodeExample(t, t.title));
+  // Apply code examples and timestamps to each topic
+  const topicsWithCode = rawTopics.map(t => addCodeExample(t, t.title));
+  const topics = addTimestamps(topicsWithCode);
 
   return {
     topics,
@@ -459,31 +475,45 @@ export async function generateTopicsFromVideo(
   // Detect if this is a programming/coding tutorial
   const isProgrammingTutorial = /\b(programming|coding|javascript|typescript|python|react|node|java|c\+\+|c#|rust|go|ruby|php|html|css|sql|api|backend|frontend|web dev|software|developer|code|tutorial)\b/i.test(metadata.title);
 
-  // Phase 7: Question type instructions
+  // Phase 7.6: Updated question type instructions - focus on UNDERSTANDING, not application
   const questionTypeInstructions = `
 QUESTION TYPE REQUIREMENTS:
-- Each question MUST have a "questionType" from: comprehension, application, analysis, synthesis, evaluation, code
-- Distribute question types across the session:
-  * At least 1 comprehension question (tests recall and understanding)
-  * At least 1 application question (tests ability to apply concepts)
-  * At least 1 analysis or synthesis question (tests deeper thinking)
+- Each question MUST have a "questionType" from: comprehension, analysis, synthesis, evaluation, code
+- Questions must test UNDERSTANDING of the content, NOT how the user would apply it
+- Distribute question types:
+  * At least 2 comprehension questions (tests recall and understanding of specific facts)
+  * At least 1 analysis question (tests understanding of relationships/reasons)
   * Use "code" type ONLY for programming videos when asking about code
 
-QUESTION TYPE EXAMPLES:
-- comprehension: "According to the video, what is..." / "What does the speaker say about..."
-- application: "How would you apply this to..." / "Given this scenario, how would you..."
-- analysis: "Why does the speaker recommend..." / "What is the relationship between..."
-- synthesis: "How does concept X connect to concept Y..." / "Combine these ideas to explain..."
-- evaluation: "What are the pros and cons of..." / "Which approach is better and why..."
-- code: "Fix the bug in this function..." / "What does this code output..."`;
+QUESTION TYPE EXAMPLES (GOOD - tests understanding):
+- comprehension: "According to the video, what are the three main characteristics of X?"
+- comprehension: "What specific example does the speaker use to illustrate Y?"
+- analysis: "Based on the video, why does the speaker recommend Z over W?"
+- synthesis: "How does concept X relate to concept Y as explained in the video?"
+- evaluation: "What evidence does the speaker provide for their claim about X?"
+- code: "What does this code output?" / "What error would this code produce?"
+
+BANNED QUESTION PATTERNS (NEVER use these):
+- "How would you apply..." / "How might you use..."
+- "What best practices should you follow..."
+- "How is this relevant to you/your life/your work..."
+- "What would you do with this knowledge..."
+- "How could you implement this in your own..."
+- "What skills will you develop..."
+- Any question about personal application or future use`;
 
   const codeQuestionInstructions = isProgrammingTutorial ? `
 
-CODE QUESTIONS (for programming videos only):
-- Set "isCodeQuestion": true for questions that involve writing/analyzing code
+CODE QUESTIONS (for programming videos ONLY):
+- Set "isCodeQuestion": true ONLY for questions that require writing/analyzing code
+- For non-programming content, ALWAYS set "isCodeQuestion": false
 - Include a "codeChallenge" object with:
   * "template": Starter code for the student to work with
-  * "language": The programming language (e.g., "javascript", "python")` : '';
+  * "language": The programming language (e.g., "javascript", "python")` : `
+
+CODE QUESTIONS:
+- This is NOT a programming video, so "isCodeQuestion" must ALWAYS be false
+- Do NOT generate any code-related questions`;
 
   const timestampInstructions = transcript ? `
 
@@ -496,80 +526,58 @@ TIMESTAMP REQUIREMENTS:
 
   const antiRepetitionRules = `
 
-CRITICAL ANTI-REPETITION RULES:
+CRITICAL RULES:
 1. NEVER start two questions with the same phrase
-2. Each question MUST reference SPECIFIC content from the video/transcript
+2. Each question MUST reference SPECIFIC facts, examples, or statements from the transcript
 3. AVOID generic questions like "What is the main message?" or "What did you learn?"
 4. Questions should feel unique and tied to actual video content
-5. Vary question structure: don't use the same pattern twice`;
+5. Vary question structure: don't use the same pattern twice
+6. Questions must TEST UNDERSTANDING of what the speaker said, not personal opinions or applications`;
 
   const prompt = transcript
-    ? `Analyze this YouTube video transcript and create an educational learning session with VARIED, SPECIFIC questions.
+    ? `You are creating a comprehension quiz to test if someone UNDERSTOOD the content of this video.
 
 Video Title: "${metadata.title}"
 Channel: ${metadata.channel}
 Video Duration: ${metadata.duration ? Math.floor(metadata.duration / 60) + ' minutes' : 'Unknown'}
 
-Transcript:
+STEP 1: Read and understand the transcript:
 ${transcript.slice(0, 15000)} ${transcript.length > 15000 ? '... (truncated)' : ''}
 
-Based on the video content:
-1. Identify 3-5 main topics covered in the video
-2. For each topic, provide a concise summary (2-3 sentences) that references SPECIFIC content
-3. Generate 2-3 questions per topic that test understanding
-4. For EACH question, include:
-   - "text": The question (must reference specific video content)
-   - "expectedAnswer": Key points a correct answer should mention
-   - "questionType": One of comprehension/application/analysis/synthesis/evaluation/code
+STEP 2: Identify 3-5 distinct topics/sections covered in the video.
+
+STEP 3: For each topic, create questions that test COMPREHENSION of what was said.
+
+YOUR GOAL: Test whether the viewer UNDERSTOOD and can RECALL what the speaker explained.
+- Questions should have FACTUAL answers based on the video content
+- The viewer should be able to answer by remembering what the speaker said
+- Do NOT ask about personal opinions, applications, or future use
+
+GOOD QUESTION EXAMPLES:
+- "According to the video, what three factors does [speaker] say influence X?"
+- "What example does [speaker] give to demonstrate Y?"
+- "In the video, how does [speaker] define Z?"
+- "What warning or caution does [speaker] mention about X?"
+
+BAD QUESTION EXAMPLES (NEVER use):
+- "How would you apply this in your work?" (tests application, not understanding)
+- "What best practices should you follow?" (generic, not from video)
+- "Why is this relevant to you?" (personal, not comprehension)
 ${questionTypeInstructions}${codeQuestionInstructions}${timestampInstructions}${antiRepetitionRules}
 
 Format your response as JSON:
 {
   "topics": [
     {
-      "title": "Topic Title",
-      "summary": "Summary referencing specific content from the video",
-      "sectionName": "e.g., Introduction, Core Concepts, Practical Examples",
+      "title": "Topic Title (specific to this video)",
+      "summary": "What the speaker explains about this topic (2-3 sentences with specific details)",
+      "sectionName": "Section name from video",
       "timestampStart": 0,
       "timestampEnd": 180,
       "questions": [
         {
-          "text": "Specific question referencing video content",
-          "expectedAnswer": "Key points: 1) ... 2) ...",
-          "questionType": "comprehension",
-          "isCodeQuestion": false
-        }
-      ],
-      "codeExample": "// Optional code example",
-      "codeLanguage": "javascript"
-    }
-  ],
-  "estimatedDuration": 15
-}
-
-Make questions thought-provoking and SPECIFIC to this video's content.`
-    : `Analyze this YouTube video and create an educational learning session with VARIED questions:
-
-Video Title: "${metadata.title}"
-Channel: ${metadata.channel}
-URL: ${metadata.url}
-
-Based on the video title and likely content:
-1. Identify 3-5 main topics this video probably covers
-2. For each topic, provide an educational summary (2-3 sentences)
-3. Generate 2-3 questions per topic with varied question types
-${questionTypeInstructions}${codeQuestionInstructions}${antiRepetitionRules}
-
-Format your response as JSON:
-{
-  "topics": [
-    {
-      "title": "Topic Title",
-      "summary": "Educational summary of what this topic covers",
-      "questions": [
-        {
-          "text": "Question text",
-          "expectedAnswer": "Key points: 1) ... 2) ...",
+          "text": "Question testing recall/understanding of specific content",
+          "expectedAnswer": "The correct answer based on what the speaker said",
           "questionType": "comprehension",
           "isCodeQuestion": false
         }
@@ -577,9 +585,38 @@ Format your response as JSON:
     }
   ],
   "estimatedDuration": 15
-}
+}`
+    : `You are creating a comprehension quiz for a video. Without the transcript, infer likely content from the title.
 
-Make questions thought-provoking and focused on understanding concepts.`;
+Video Title: "${metadata.title}"
+Channel: ${metadata.channel}
+
+Based on the video title, infer what specific topics and facts the video likely covers.
+Create questions that would test UNDERSTANDING of the content (not personal application).
+
+YOUR GOAL: Test whether the viewer UNDERSTOOD and can RECALL what was explained.
+- Questions should have FACTUAL answers based on likely video content
+- Do NOT ask about personal opinions, applications, or future use
+${questionTypeInstructions}${codeQuestionInstructions}${antiRepetitionRules}
+
+Format your response as JSON:
+{
+  "topics": [
+    {
+      "title": "Topic Title (specific to likely content)",
+      "summary": "What this section likely explains",
+      "questions": [
+        {
+          "text": "Question testing understanding of specific content",
+          "expectedAnswer": "Expected factual answer",
+          "questionType": "comprehension",
+          "isCodeQuestion": false
+        }
+      ]
+    }
+  ],
+  "estimatedDuration": 15
+}`;
 
   try {
     const response = await callGemini(prompt);

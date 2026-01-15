@@ -15,26 +15,31 @@ interface EvaluationFeedbackProps {
   isVisible: boolean;
 }
 
-// Styling configuration for each result type
+// Phase 7.6: Updated styling configuration for better contrast
+// - Icon color uses the theme color (green/red/yellow)
+// - Title text uses dark color for readability
 const resultConfig = {
   pass: {
-    bgColor: 'bg-success/20',
+    bgColor: 'bg-success/15',
     borderColor: 'border-success',
-    textColor: 'text-success',
+    iconColor: 'text-success',
+    titleColor: 'text-text', // Dark text for readability
     icon: 'check_circle',
     title: 'Correct!',
   },
   fail: {
-    bgColor: 'bg-error/20',
+    bgColor: 'bg-error/15',
     borderColor: 'border-error',
-    textColor: 'text-error',
+    iconColor: 'text-error',
+    titleColor: 'text-text', // Dark text for readability
     icon: 'cancel',
     title: 'Not quite',
   },
   neutral: {
-    bgColor: 'bg-warning/20',
+    bgColor: 'bg-warning/15',
     borderColor: 'border-warning',
-    textColor: 'text-warning',
+    iconColor: 'text-warning',
+    titleColor: 'text-text', // Dark text for readability
     icon: 'help',
     title: 'Partial understanding',
   },
@@ -88,10 +93,10 @@ export function EvaluationFeedback({
                 <MaterialIcon
                   name={config.icon}
                   size="xl"
-                  className={config.textColor}
+                  className={config.iconColor}
                 />
               </motion.div>
-              <h3 className={`text-xl font-bold ${config.textColor}`}>
+              <h3 className={`text-xl font-bold ${config.titleColor}`}>
                 {config.title}
               </h3>
             </div>
