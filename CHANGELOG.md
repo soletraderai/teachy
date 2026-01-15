@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Pro Tier Display Race Condition** (Phase 6 - 6th attempt):
+  - Fixed `isLoading: false` initial state causing premature render
+  - Removed ProfileTicket default tier that masked loading state
+  - Added Zustand `hasHydrated` tracking with `onRehydrateStorage` callback
+  - Updated AuthInitializer to wait for hydration before auth init
+  - Added backend retry logic with tier preservation on failure
+  - Files: `authStore.ts`, `ProfileTicket.tsx`, `App.tsx`
+
 ### Added
 - TanStack Query integration for data fetching with automatic caching
 - Custom React hooks for Dashboard (`useCommitment`, `useLearningInsights`)

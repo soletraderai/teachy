@@ -19,6 +19,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   supabaseSession: Session | null;
+  hasHydrated: boolean;  // Track Zustand persist hydration
 
   // Actions
   setUser: (user: AuthUser | null) => void;
@@ -26,6 +27,7 @@ interface AuthState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setSupabaseSession: (session: Session | null) => void;
+  setHasHydrated: (hydrated: boolean) => void;
   logout: () => void;
   isAuthenticated: () => boolean;
   initializeAuth: () => Promise<void>;
@@ -70,15 +72,17 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       accessToken: null,
-      isLoading: false,
+      isLoading: true,  // Start as true so app waits for auth initialization
       error: null,
       supabaseSession: null,
+      hasHydrated: false,  // Track Zustand persist hydration
 
       setUser: (user) => set({ user }),
       setAccessToken: (token) => set({ accessToken: token }),
       setLoading: (loading) => set({ isLoading: loading }),
       setError: (error) => set({ error }),
       setSupabaseSession: (session) => set({ supabaseSession: session }),
+      setHasHydrated: (hydrated) => set({ hasHydrated: hydrated }),
 
       logout: async () => {
         try {
@@ -125,18 +129,34 @@ export const useAuthStore = create<AuthState>()(
               accessToken: session.access_token,
             });
 
-            // Fetch user profile from backend
+            // Fetch user profile from backend with retry
             try {
               const backendUser = await authApi.getMe();
               set({
                 user: supabaseUserToAuthUser(session.user, backendUser),
               });
             } catch (backendError) {
-              console.warn('Backend user fetch failed, using Supabase data only:', backendError);
-              // Backend might not have user yet, use Supabase data
-              set({
-                user: supabaseUserToAuthUser(session.user),
-              });
+              console.warn('Backend user fetch failed, retrying...:', backendError);
+
+              // Retry once after short delay
+              await new Promise(resolve => setTimeout(resolve, 1000));
+
+              try {
+                const backendUser = await authApi.getMe();
+                set({
+                  user: supabaseUserToAuthUser(session.user, backendUser),
+                });
+              } catch (retryError) {
+                console.error('Backend retry failed, using Supabase data:', retryError);
+                // Use Supabase data but preserve existing tier if available
+                const existingUser = get().user;
+                set({
+                  user: {
+                    ...supabaseUserToAuthUser(session.user),
+                    tier: existingUser?.tier || 'FREE',
+                  },
+                });
+              }
             }
           } else {
             // No active session
@@ -166,6 +186,10 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         accessToken: state.accessToken,
       }),
+      onRehydrateStorage: () => (state) => {
+        // Mark hydration complete when Zustand restores from localStorage
+        state?.setHasHydrated(true);
+      },
     }
   )
 );

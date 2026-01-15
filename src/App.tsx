@@ -60,11 +60,15 @@ function SyncRetryManager() {
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = useState(false);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
 
   useEffect(() => {
+    // Wait for Zustand to hydrate from localStorage first
+    if (!hasHydrated) return;
+
     const init = async () => {
       try {
-        // Wait for auth to fully initialize
+        // Wait for auth to fully initialize (fetches fresh data from backend)
         await useAuthStore.getState().initializeAuth();
 
         // Then sync sessions if authenticated
@@ -79,10 +83,10 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
       }
     };
     init();
-  }, []);
+  }, [hasHydrated]);
 
-  // Show loading spinner while initializing
-  if (!isReady || isLoading) {
+  // Show loading spinner while hydrating, initializing, or loading
+  if (!hasHydrated || !isReady || isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
