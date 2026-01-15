@@ -6,9 +6,10 @@
 name: Deploy to Production
 
 on:
-  push:
-    branches:
-      - main
+  # Disabled auto-deploy on push - infrastructure not set up yet
+  # push:
+  #   branches:
+  #     - main
   workflow_dispatch:
     inputs:
       skip_tests:
