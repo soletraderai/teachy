@@ -1,0 +1,13 @@
+- Update name to QuizTube. This will be the new name of the platform. Needs to be impletemented **everywhere**
+- When a user is logged in they are not to be shown the log in or register links and only shown an Avatar icon which will take them to their profile page.
+- Add Google Material Icon Library
+- Move navbar to sidebar with a dark background and fun animations to collapse and expand. 
+- Sidebar nav items to have icons assigned to each item, need to keep the neobrutalism design
+- Collapsed sidebar is icons only
+- Ajax search for live results when searching. Search is to show 5 options of text for autocomplete underneath the search term. Also update library results on live search.
+- Need to ensure that we only accept YouTube URLs for now
+- Add in a cleaner 'centralized route management' system
+- Need a strategy in place to ensure that our platform is not taking away from creators and we are trying to give them as much value as possible. How can we have a function to leave a like and a commment for the user? Any other suggestions?
+- Need to extract the transcript of the file and put this in to notes for the session. This needs to be in a way where we rewrite the transcript that is like learning material for the user that they can refernce whilst they are learning. This saves them from rewatching the video. It would be good if we can align this with the questions that are being asked. 
+- Session notes are to be provided with every question. This feature will have content pulled from the transcript then turned into sessions notes like it is outlined above. I only want these notes to be available if the user gets stuck. The purpsoe of this is each session is purely about the user obtaining the information in a quick format. It does not matter whether they pass or fail, it is to help them learn in a quick and interactive manner. We can have a panel that pops out from the right on desktop (need a solution for mobile that fits within the window) if the user gets stuck. This way we can display to the user the direct information for the content. We need this to be timestamped in accordance with the video.
+- Code editor should only be visable if the code is relative to the lesson. Lesson can cover anything and everything.
