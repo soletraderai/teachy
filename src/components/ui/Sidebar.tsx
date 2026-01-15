@@ -1,7 +1,8 @@
 import { useState, useEffect, ReactNode } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import MaterialIcon from './MaterialIcon';
 import Tooltip from './Tooltip';
+import ProfileTicket from './ProfileTicket';
 import { useAuthStore } from '../../stores/authStore';
 
 // Wrapper component for conditional tooltip
@@ -58,6 +59,7 @@ export default function Sidebar({
   onHelpClick,
 }: SidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
   const [isMobile, setIsMobile] = useState(false);
 
@@ -93,13 +95,13 @@ export default function Sidebar({
   const sidebarContent = (
     <>
       {/* Logo Section */}
-      <div className={`flex items-center h-16 px-4 border-b border-white/10 ${collapsed ? 'justify-center' : ''}`}>
+      <div className={`flex items-center h-16 px-4 border-b border-eg-ink/10 ${collapsed ? 'justify-center' : ''}`}>
         <Link
           to="/"
           onClick={handleNavClick}
-          className="flex items-center gap-3 text-white hover:text-primary transition-colors"
+          className="flex items-center gap-3 text-eg-ink hover:text-eg-violet transition-colors"
         >
-          <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
+          <div className="w-8 h-8 bg-primary rounded flex items-center justify-center border-2 border-eg-ink">
             <span className="font-heading font-bold text-text text-sm">QT</span>
           </div>
           {!collapsed && (
@@ -117,16 +119,16 @@ export default function Sidebar({
                 <Link
                   to={item.to}
                   onClick={handleNavClick}
-                  className={`flex items-center gap-3 px-3 py-3 rounded transition-all hover:scale-[1.02] ${
+                  className={`sidebar-tab-item flex items-center gap-3 px-3 py-3 rounded-l transition-all hover:scale-[1.02] ${
                     isActive(item.to)
-                      ? 'bg-primary/20 text-white border-l-4 border-primary -ml-0.5'
-                      : 'text-white/70 hover:bg-white/10 hover:text-white border-l-4 border-transparent -ml-0.5'
+                      ? 'active text-eg-ink font-semibold'
+                      : 'text-eg-ink/70 hover:bg-eg-ink/5 hover:text-eg-ink'
                   } ${collapsed ? 'justify-center' : ''}`}
                 >
                   <MaterialIcon
                     name={item.icon}
                     size="lg"
-                    className={isActive(item.to) ? 'text-primary' : ''}
+                    className={isActive(item.to) ? 'text-eg-violet' : ''}
                     decorative
                   />
                   {!collapsed && (
@@ -135,7 +137,7 @@ export default function Sidebar({
                     </span>
                   )}
                   {!collapsed && item.badge !== undefined && item.badge > 0 && (
-                    <span className="px-2 py-0.5 bg-secondary text-text text-xs font-bold rounded-full">
+                    <span className="px-2 py-0.5 bg-eg-pink text-white text-xs font-bold rounded-full border border-eg-ink">
                       {item.badge}
                     </span>
                   )}
@@ -147,7 +149,7 @@ export default function Sidebar({
       </nav>
 
       {/* Bottom Section */}
-      <div className="border-t border-white/10 py-4">
+      <div className="border-t border-eg-ink/10 py-4">
         <ul className="space-y-1 px-3">
           {filteredBottomItems.map((item) => (
             <li key={item.to}>
@@ -155,16 +157,16 @@ export default function Sidebar({
                 <Link
                   to={item.to}
                   onClick={handleNavClick}
-                  className={`flex items-center gap-3 px-3 py-3 rounded transition-all hover:scale-[1.02] ${
+                  className={`sidebar-tab-item flex items-center gap-3 px-3 py-3 rounded-l transition-all hover:scale-[1.02] ${
                     isActive(item.to)
-                      ? 'bg-primary/20 text-white border-l-4 border-primary -ml-0.5'
-                      : 'text-white/70 hover:bg-white/10 hover:text-white border-l-4 border-transparent -ml-0.5'
+                      ? 'active text-eg-ink font-semibold'
+                      : 'text-eg-ink/70 hover:bg-eg-ink/5 hover:text-eg-ink'
                   } ${collapsed ? 'justify-center' : ''}`}
                 >
                   <MaterialIcon
                     name={item.icon}
                     size="lg"
-                    className={isActive(item.to) ? 'text-primary' : ''}
+                    className={isActive(item.to) ? 'text-eg-violet' : ''}
                     decorative
                   />
                   {!collapsed && (
@@ -181,7 +183,7 @@ export default function Sidebar({
           <li>
             <ConditionalTooltip show={collapsed} content="Help">
               <button
-                className={`flex items-center gap-3 px-3 py-3 rounded transition-all w-full text-white/70 hover:bg-white/10 hover:text-white ${collapsed ? 'justify-center' : ''}`}
+                className={`flex items-center gap-3 px-3 py-3 rounded transition-all w-full text-eg-ink/70 hover:bg-eg-ink/5 hover:text-eg-ink hover:scale-[1.02] ${collapsed ? 'justify-center' : ''}`}
                 onClick={() => {
                   if (onHelpClick) {
                     onHelpClick();
@@ -202,7 +204,7 @@ export default function Sidebar({
           <div className="px-3 mt-4">
             <button
               onClick={onToggleCollapse}
-              className={`flex items-center gap-3 px-3 py-2 rounded transition-all w-full text-white/50 hover:bg-white/10 hover:text-white ${collapsed ? 'justify-center' : ''}`}
+              className={`flex items-center gap-3 px-3 py-2 rounded transition-all w-full text-eg-ink/50 hover:bg-eg-ink/5 hover:text-eg-ink ${collapsed ? 'justify-center' : ''}`}
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               <MaterialIcon
@@ -219,36 +221,17 @@ export default function Sidebar({
 
         {/* User Info */}
         {isAuthenticated() && user && (
-          <div className={`px-3 mt-4 pt-4 border-t border-white/10 ${collapsed ? 'flex justify-center' : ''}`}>
-            <ConditionalTooltip show={collapsed} content={user.displayName || 'Profile'}>
-              <Link
-                to="/settings"
-                onClick={handleNavClick}
-                className={`flex items-center gap-3 rounded transition-all hover:bg-white/10 ${collapsed ? 'p-2' : 'px-3 py-2'}`}
-              >
-                {user.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.displayName}
-                    className="w-8 h-8 rounded-full border-2 border-white/20"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                    <span className="font-heading font-bold text-text text-xs">
-                      {user.displayName?.slice(0, 2).toUpperCase() || 'U'}
-                    </span>
-                  </div>
-                )}
-                {!collapsed && (
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white text-sm font-semibold truncate">
-                      {user.displayName}
-                    </p>
-                    <p className="text-white/50 text-xs truncate">{user.tier}</p>
-                  </div>
-                )}
-              </Link>
-            </ConditionalTooltip>
+          <div className={`px-3 mt-4 pt-4 border-t border-eg-ink/10 ${collapsed ? 'flex justify-center' : ''}`}>
+            <ProfileTicket
+              avatarUrl={user.avatarUrl}
+              displayName={user.displayName || 'User'}
+              tier={user.tier}
+              onClick={() => {
+                navigate('/settings');
+                handleNavClick();
+              }}
+              collapsed={collapsed}
+            />
           </div>
         )}
       </div>
@@ -262,7 +245,7 @@ export default function Sidebar({
         {/* Backdrop */}
         {mobileOpen && (
           <div
-            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            className="fixed inset-0 bg-eg-ink/40 backdrop-blur-sm z-40 md:hidden"
             onClick={onMobileClose}
             aria-hidden="true"
           />
@@ -270,7 +253,7 @@ export default function Sidebar({
 
         {/* Sidebar */}
         <aside
-          className={`fixed top-0 left-0 h-full w-64 bg-[#1a1a1a] z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
+          className={`fixed top-0 left-0 h-full w-64 bg-eg-paper border-r-4 border-eg-ink z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
             mobileOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
           role="navigation"
@@ -279,7 +262,7 @@ export default function Sidebar({
           {/* Close button */}
           <button
             onClick={onMobileClose}
-            className="absolute top-4 right-4 p-1 text-white/70 hover:text-white transition-colors"
+            className="absolute top-4 right-4 p-1 text-eg-ink/70 hover:text-eg-ink transition-colors"
             aria-label="Close menu"
           >
             <MaterialIcon name="close" size="lg" />
@@ -293,7 +276,7 @@ export default function Sidebar({
   // Desktop: Fixed sidebar
   return (
     <aside
-      className={`fixed top-0 left-0 h-full bg-[#1a1a1a] border-r border-white/10 transition-all duration-300 ease-in-out hidden md:flex md:flex-col z-30 ${
+      className={`fixed top-0 left-0 h-full bg-eg-paper border-r-4 border-eg-ink transition-all duration-300 ease-in-out hidden md:flex md:flex-col z-30 ${
         collapsed ? 'w-16' : 'w-60'
       }`}
       role="navigation"

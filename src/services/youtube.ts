@@ -2,7 +2,8 @@
 import type { VideoMetadata, TranscriptSegment } from '../types';
 
 // Proxy server URL for transcript and video metadata extraction (bypasses CORS)
-const TRANSCRIPT_PROXY_URL = 'http://localhost:3001';
+// Note: API server runs on 3001, transcript proxy runs on 3002
+const TRANSCRIPT_PROXY_URL = 'http://localhost:3002';
 
 // Check if the transcript proxy server is available
 async function isProxyAvailable(): Promise<boolean> {

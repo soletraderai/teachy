@@ -6,7 +6,7 @@ import cors from 'cors';
 import { YouTubeTranscriptApi } from 'youtube-captions-api';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PROXY_PORT || process.env.PORT || 3002;
 
 // Enable CORS for frontend origin with credentials support
 // Accept multiple localhost ports since Vite may use 5173, 5174, 5175, etc.

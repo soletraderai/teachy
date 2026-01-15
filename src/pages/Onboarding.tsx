@@ -273,14 +273,17 @@ export default function Onboarding() {
         }),
       });
 
-      if (response.ok) {
-        // Clear saved onboarding progress
-        clearOnboardingProgress();
-        // Update user state
-        if (user) {
-          setUser({ ...user, onboardingCompleted: true });
-        }
-        navigate('/');
+      // Clear saved onboarding progress regardless of API response
+      clearOnboardingProgress();
+
+      // Update user state and navigate
+      if (user) {
+        setUser({ ...user, onboardingCompleted: true });
+      }
+      navigate('/');
+
+      if (!response.ok) {
+        console.warn('Onboarding API returned non-OK status:', response.status);
       }
     } catch (error) {
       console.error('Failed to complete onboarding:', error);

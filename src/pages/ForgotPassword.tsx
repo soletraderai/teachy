@@ -22,7 +22,7 @@ export default function ForgotPassword() {
       return false;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setError('Please enter a valid email address');
+      setError('Check the format and try again');
       return false;
     }
     setError('');

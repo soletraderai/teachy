@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
-import ProgressBar from '../components/ui/ProgressBar';
+import RetroProgressBar from '../components/ui/RetroProgressBar';
+import BrutalBadge from '../components/ui/BrutalBadge';
 import StaggeredList, { StaggeredItem } from '../components/ui/StaggeredList';
 import LearningPathCard, { type LearningPathData } from '../components/ui/LearningPathCard';
 import EmptyState from '../components/ui/EmptyState';
@@ -109,8 +110,8 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       {/* Header with Personalized Greeting */}
-      <div className="text-center space-y-2">
-        <h1 className="font-heading text-3xl sm:text-4xl font-bold text-text">
+      <div className="text-center space-y-3">
+        <h1 className="font-heading text-4xl sm:text-5xl font-black text-text animate-fade-in">
           {greeting}
         </h1>
         <p className="font-body text-lg text-text/70">
@@ -121,7 +122,7 @@ export default function Dashboard() {
       {/* Main Content Grid - responsive to larger screens */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
         {/* Daily Commitment Widget */}
-        <Card className="md:col-span-2 lg:col-span-1">
+        <Card popStyle shadowColor="lime" className="md:col-span-2 lg:col-span-1">
           <div className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <h2 className="font-heading text-xl font-bold text-text">
@@ -129,14 +130,10 @@ export default function Dashboard() {
               </h2>
               <div className="flex gap-2">
                 {commitment?.busyWeekMode && (
-                  <span className="px-2 py-1 text-sm bg-primary/30 border-2 border-border font-heading">
-                    Busy Week
-                  </span>
+                  <BrutalBadge color="orange" size="sm">Busy Week</BrutalBadge>
                 )}
                 {commitment?.vacationMode && (
-                  <span className="px-2 py-1 text-sm bg-secondary/20 border-2 border-border font-heading">
-                    Vacation Mode
-                  </span>
+                  <BrutalBadge color="cyan" size="sm">Vacation</BrutalBadge>
                 )}
               </div>
             </div>
@@ -169,11 +166,15 @@ export default function Dashboard() {
 
                 {/* Progress Bar */}
                 <div className="space-y-2">
-                  <ProgressBar
-                    current={commitment.currentMinutes}
-                    total={commitment.targetMinutes}
-                    showPercentage
-                    label={`${formatTime(commitment.currentMinutes)} / ${formatTime(commitment.targetMinutes)}`}
+                  <div className="text-sm text-text/70 mb-1">
+                    {formatTime(commitment.currentMinutes)} / {formatTime(commitment.targetMinutes)}
+                  </div>
+                  <RetroProgressBar
+                    value={commitment.currentMinutes}
+                    max={commitment.targetMinutes}
+                    segments={10}
+                    color="lime"
+                    showLabel={true}
                   />
                 </div>
 
@@ -226,7 +227,7 @@ export default function Dashboard() {
         </Card>
 
         {/* Quick Stats Card */}
-        <Card>
+        <Card popStyle shadowColor="cyan">
           <div className="space-y-4">
             <h2 className="font-heading text-xl font-bold text-text">
               Quick Stats
@@ -267,7 +268,7 @@ export default function Dashboard() {
         </Card>
 
         {/* Quick Actions Card */}
-        <Card>
+        <Card popStyle shadowColor="violet">
           <div className="space-y-4">
             <h2 className="font-heading text-xl font-bold text-text">
               Quick Actions
@@ -424,23 +425,21 @@ export default function Dashboard() {
 
       {/* Due for Review Card */}
       {dueTopics && dueTopics.length > 0 && (
-        <Card>
+        <Card popStyle shadowColor="orange">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <h2 className="font-heading text-xl font-bold text-text">
                 Due for Review
               </h2>
-              <span className="material-icons text-secondary" aria-hidden="true">
-                schedule
-              </span>
+              <BrutalBadge color="orange" size="sm">{dueTopics.length}</BrutalBadge>
             </div>
             <p className="text-sm text-text/70">
               Topics from spaced repetition ready for review
             </p>
-            <div className="flex items-center justify-between p-4 bg-secondary/20 border-3 border-border">
+            <div className="flex items-center justify-between p-4 bg-eg-orange/20 border-3 border-eg-ink">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-secondary border-2 border-border flex items-center justify-center">
-                  <span className="font-heading text-xl font-bold text-text">{dueTopics.length}</span>
+                <div className="w-12 h-12 bg-eg-orange border-2 border-eg-ink flex items-center justify-center">
+                  <span className="font-heading text-xl font-bold text-white">{dueTopics.length}</span>
                 </div>
                 <div>
                   <p className="font-heading font-semibold text-text">
@@ -453,7 +452,7 @@ export default function Dashboard() {
               </div>
               <button
                 onClick={() => navigate('/review')}
-                className="px-4 py-2 font-heading font-semibold bg-secondary border-3 border-border shadow-brutal-sm hover:shadow-brutal transition-all flex items-center gap-2"
+                className="px-4 py-2 font-heading font-semibold bg-eg-orange text-white border-3 border-eg-ink shadow-brutal-sm hover:shadow-brutal transition-all flex items-center gap-2"
               >
                 <span className="material-icons text-base" aria-hidden="true">
                   play_arrow
@@ -679,15 +678,13 @@ export default function Dashboard() {
 
       {/* Knowledge Gaps Section (Pro Only) */}
       {isPro && library.sessions.length > 0 ? (
-        <Card>
+        <Card popStyle shadowColor="pink">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <h2 id="knowledge-gaps-heading" className="font-heading text-xl font-bold text-text">
                 Knowledge Gaps
               </h2>
-              <span className="px-2 py-0.5 text-xs font-bold bg-secondary border-2 border-border">
-                PRO
-              </span>
+              <BrutalBadge color="violet">PRO</BrutalBadge>
             </div>
             <p className="text-sm text-text/70">
               Topics where you may need more practice
@@ -847,16 +844,18 @@ export default function Dashboard() {
         </Card>
       ) : library.sessions.length > 0 ? (
         /* Knowledge Gaps Pro Teaser for Free Users */
-        <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-surface/90 z-10" />
+        <Card popStyle className="relative overflow-hidden classified-folder">
+          {/* CLASSIFIED stamp overlay */}
+          <div className="classified-stamp">CLASSIFIED</div>
+          {/* Scanline overlay effect */}
+          <div className="scanline-overlay" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-eg-paper/90 z-10" />
           <div className="space-y-4 blur-sm">
             <div className="flex items-center gap-2">
               <h2 className="font-heading text-xl font-bold text-text">
                 Knowledge Gaps
               </h2>
-              <span className="px-2 py-0.5 text-xs font-bold bg-secondary border-2 border-border">
-                PRO
-              </span>
+              <BrutalBadge color="violet">PRO</BrutalBadge>
             </div>
             <p className="text-sm text-text/70">
               Topics where you may need more practice
@@ -880,7 +879,7 @@ export default function Dashboard() {
           </div>
           <div className="absolute inset-0 flex items-center justify-center z-20">
             <div className="text-center">
-              <span className="material-icons text-4xl text-secondary mb-2" aria-hidden="true">
+              <span className="material-icons text-4xl text-eg-violet mb-2" aria-hidden="true">
                 psychology
               </span>
               <p className="font-heading font-bold text-text mb-2">Identify Knowledge Gaps</p>
@@ -889,7 +888,7 @@ export default function Dashboard() {
               </p>
               <button
                 onClick={() => navigate('/pricing')}
-                className="px-4 py-2 font-heading font-bold bg-secondary border-3 border-border shadow-brutal hover:shadow-brutal-hover transition-all"
+                className="px-4 py-2 font-heading font-bold bg-eg-violet text-white border-3 border-eg-ink shadow-brutal hover:shadow-brutal-hover transition-all"
               >
                 Upgrade to Pro
               </button>
@@ -900,15 +899,13 @@ export default function Dashboard() {
 
       {/* Pro Insights Section */}
       {isPro ? (
-        <Card>
+        <Card popStyle shadowColor="pink">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <h2 className="font-heading text-xl font-bold text-text">
                 Learning Insights
               </h2>
-              <span className="px-2 py-0.5 text-xs font-bold bg-secondary border-2 border-border">
-                PRO
-              </span>
+              <BrutalBadge color="violet">PRO</BrutalBadge>
             </div>
 
             {insights ? (
@@ -961,16 +958,18 @@ export default function Dashboard() {
           </div>
         </Card>
       ) : (
-        <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-surface/90 z-10" />
+        <Card popStyle className="relative overflow-hidden classified-folder">
+          {/* CLASSIFIED stamp overlay */}
+          <div className="classified-stamp">CLASSIFIED</div>
+          {/* Scanline overlay effect */}
+          <div className="scanline-overlay" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-eg-paper/90 z-10" />
           <div className="space-y-4 blur-sm">
             <div className="flex items-center gap-2">
               <h2 className="font-heading text-xl font-bold text-text">
                 Learning Insights
               </h2>
-              <span className="px-2 py-0.5 text-xs font-bold bg-secondary border-2 border-border">
-                PRO
-              </span>
+              <BrutalBadge color="violet">PRO</BrutalBadge>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="p-3 bg-surface border-2 border-border">
@@ -985,10 +984,13 @@ export default function Dashboard() {
           </div>
           <div className="absolute inset-0 flex items-center justify-center z-20">
             <div className="text-center">
+              <span className="material-icons text-4xl text-eg-pink mb-2" aria-hidden="true">
+                insights
+              </span>
               <p className="font-heading font-bold text-text mb-2">Unlock Learning Insights</p>
               <button
                 onClick={() => navigate('/pricing')}
-                className="px-4 py-2 font-heading font-bold bg-secondary border-3 border-border shadow-brutal hover:shadow-brutal-hover transition-all"
+                className="px-4 py-2 font-heading font-bold bg-eg-violet text-white border-3 border-eg-ink shadow-brutal hover:shadow-brutal-hover transition-all"
               >
                 Upgrade to Pro
               </button>
@@ -1150,12 +1152,10 @@ export default function Dashboard() {
                       aria-label={`${topic.name}: ${topic.questionsAnswered} questions answered${isStrength ? ', marked as strength' : ''}`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-heading text-text truncate max-w-[60%]">
+                        <span className="text-sm font-heading text-text truncate max-w-[60%] flex items-center gap-2">
                           {topic.name}
                           {isStrength && (
-                            <span className="ml-2 px-2 py-0.5 text-xs bg-secondary/30 border border-border" aria-hidden="true">
-                              Strength
-                            </span>
+                            <BrutalBadge color="lime" size="sm">Strength</BrutalBadge>
                           )}
                         </span>
                         <span className="text-sm text-text/60">

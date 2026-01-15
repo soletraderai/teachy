@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
+import EmptyState from '../components/ui/EmptyState';
 import { StaggeredItem } from '../components/ui/StaggeredList';
 import { useSessionStore } from '../stores/sessionStore';
 import { useAuthStore } from '../stores/authStore';
@@ -489,49 +490,56 @@ export default function Library() {
 
       {/* Empty State */}
       {filteredSessions.length === 0 && (
-        // Empty state
-        <Card className="text-center py-12">
-          <div className="space-y-4">
-            <svg
-              className="w-16 h-16 mx-auto text-text/30"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-              />
-            </svg>
-
-            {hasActiveFilters ? (
-              <>
-                <h3 className="font-heading text-xl font-bold text-text">
-                  No matching sessions
-                </h3>
-                <p className="text-text/70">
-                  Try adjusting your search or filters
-                </p>
-                <Button onClick={clearFilters}>
-                  Clear Filters
-                </Button>
-              </>
-            ) : (
-              <>
-                <h3 className="font-heading text-xl font-bold text-text">
-                  Your library is empty
-                </h3>
-                <p className="text-text/70">
-                  Complete your first learning session to see it here!
-                </p>
-                <Button onClick={() => navigate('/')}>
-                  Start Learning
-                </Button>
-              </>
-            )}
-          </div>
+        <Card>
+          {hasActiveFilters ? (
+            <EmptyState
+              icon={
+                <svg
+                  className="w-16 h-16"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              }
+              title="No results"
+              description="Try different keywords or adjust your filters."
+              action={{
+                label: "Clear Filters",
+                onClick: clearFilters,
+              }}
+            />
+          ) : (
+            <EmptyState
+              icon={
+                <svg
+                  className="w-16 h-16"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                  />
+                </svg>
+              }
+              title="No videos yet"
+              description="Paste a video link to get started."
+              action={{
+                label: "Add Video",
+                onClick: () => navigate('/'),
+              }}
+            />
+          )}
         </Card>
       )}
     </div>

@@ -1,8 +1,6 @@
-- Need better feedback from the system
 - Make use of ElevenLabs to help people converse instad of typing. This will be a pro feature. Will enable speech to text and text to speech.
 - Voice commands for actions through-out
 - Allow user feedback form for the platform to suggest new features for internal review
-- Provide more accurate and in-depth feedback to the user about their questions.
 
 **Deployment Strategy**
 - Digital Ocean for Hosting

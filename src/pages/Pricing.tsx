@@ -162,8 +162,16 @@ export default function Pricing() {
 
       {/* Pricing Cards */}
       <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-        {/* Free Tier */}
-        <Card className="relative flex flex-col">
+        {/* Free Tier - Overlay for logged-in users to emphasize Pro */}
+        <Card className={`relative flex flex-col ${isAuthenticated() && user?.tier === 'FREE' ? 'opacity-60' : ''}`}>
+          {/* Current Plan Badge for logged-in free users */}
+          {isAuthenticated() && user?.tier === 'FREE' && (
+            <div className="absolute -top-3 left-4">
+              <span className="bg-surface text-text/70 font-heading font-semibold text-xs px-3 py-1 border-2 border-border">
+                YOUR CURRENT PLAN
+              </span>
+            </div>
+          )}
           <div className="mb-6">
             <h2 className="font-heading text-2xl font-bold text-text">
               {pricingPlans.free.name}
@@ -220,6 +228,7 @@ export default function Pricing() {
             size="lg"
             className="w-full"
             onClick={() => handleSelectPlan('free')}
+            disabled={isAuthenticated() && user?.tier === 'FREE'}
           >
             {user?.tier === 'FREE' ? 'Current Plan' : 'Get Started Free'}
           </Button>

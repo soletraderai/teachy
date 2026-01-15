@@ -151,24 +151,57 @@ router.patch('/preferences', async (req: AuthenticatedRequest, res: Response, ne
 // POST /api/users/complete-onboarding
 router.post('/complete-onboarding', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const { tutorPersonality } = req.body;
+    const {
+      tutorPersonality,
+      learningStyle,
+      languageVariant,
+      dailyCommitmentMinutes,
+      preferredTime,
+      preferredDays
+    } = req.body;
 
     // Map frontend tutor personality to valid enum value
     const validPersonalities = ['PROFESSOR', 'COACH', 'DIRECT', 'CREATIVE'];
     const personality = validPersonalities.includes(tutorPersonality) ? tutorPersonality : 'COACH';
 
+    // Map frontend learning style to valid enum value
+    const learningStyleMap: Record<string, string> = {
+      'visual': 'THOROUGH',
+      'reading': 'THOROUGH',
+      'auditory': 'QUICK',
+      'kinesthetic': 'CHALLENGING',
+    };
+    const mappedLearningStyle = learningStyleMap[learningStyle] || 'THOROUGH';
+
+    // Map language variant
+    const validLanguageVariants = ['BRITISH', 'AMERICAN', 'AUSTRALIAN'];
+    const mappedLanguageVariant = validLanguageVariants.includes(languageVariant) ? languageVariant : 'AMERICAN';
+
+    // Build update data
+    const updateData: Record<string, unknown> = {
+      tutorPersonality: personality,
+      onboardingCompleted: true,
+      learningStyle: mappedLearningStyle,
+      languageVariant: mappedLanguageVariant,
+    };
+
+    if (dailyCommitmentMinutes && typeof dailyCommitmentMinutes === 'number') {
+      updateData.dailyCommitmentMinutes = dailyCommitmentMinutes;
+    }
+
+    if (preferredTime) {
+      updateData.preferredTime = preferredTime;
+    }
+
+    if (preferredDays && Array.isArray(preferredDays)) {
+      updateData.preferredDays = preferredDays;
+    }
+
     // Update preferences with onboarding data
     const preferences = await prisma.userPreferences.upsert({
       where: { userId: req.user!.id },
-      update: {
-        tutorPersonality: personality,
-        onboardingCompleted: true,
-      },
-      create: {
-        userId: req.user!.id,
-        tutorPersonality: personality,
-        onboardingCompleted: true,
-      },
+      update: updateData,
+      create: { userId: req.user!.id, ...updateData },
     });
 
     res.json({
