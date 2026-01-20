@@ -193,6 +193,20 @@ export default function Settings() {
   const [emailPromptsFrequency, setEmailPromptsFrequency] = useState(3);
   const [isUpdatingEmailPrompts, setIsUpdatingEmailPrompts] = useState(false);
 
+  // Phase 8 Fix: Sync formData with settings when store rehydrates from localStorage
+  // This fixes the bug where userName would show empty after login/reload
+  useEffect(() => {
+    // Only update if settings.userName has a value and formData.userName is empty
+    // This handles the case where localStorage rehydration happens after initial render
+    if (settings.userName && !formData.userName) {
+      setFormData(prev => ({
+        ...prev,
+        userName: settings.userName,
+        displayName: user?.displayName || settings.userName,
+      }));
+    }
+  }, [settings.userName, user?.displayName]);
+
   // Fetch commitment mode status and daily target
   useEffect(() => {
     const fetchCommitmentStatus = async () => {

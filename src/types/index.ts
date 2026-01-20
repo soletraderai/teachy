@@ -63,6 +63,18 @@ export interface KnowledgeBase {
   sources: KnowledgeSource[];
 }
 
+// Phase 8: Scraped resource from external URLs mentioned in transcript
+export interface ScrapedResource {
+  id: string;
+  sourceUrl: string;                                              // REQUIRED - always preserve for attribution
+  sourceType: 'github' | 'documentation' | 'article' | 'tool';
+  title: string;
+  overview: string;                                               // AI-summarized overview
+  rawContent: string;                                             // Key excerpts (max 2000 chars)
+  scrapedAt: number;                                              // Timestamp
+  error?: string;                                                 // If scraping failed
+}
+
 // Question type
 export interface Question {
   id: string;
@@ -79,6 +91,11 @@ export interface Question {
   timestampStart?: number; // seconds into video
   timestampEnd?: number;   // seconds into video
   evaluationResult?: EvaluationResult;
+  // Phase 8: Source context for contextual questions
+  sourceQuote?: string;           // Direct quote from transcript this question is based on
+  sourceTimestamp?: number;       // Timestamp in video where source content appears
+  sourceSegmentId?: string;       // ID of the transcript segment
+  relatedResourceIds?: string[];  // IDs of scraped resources related to this question
 }
 
 // Dig deeper conversation message type
@@ -150,6 +167,10 @@ export interface Session {
   structuredNotes?: StructuredNotes;  // AI-generated structured notes from transcript
   // Phase 7 F2: Parsed transcript segments for help panel context
   transcriptSegments?: ParsedTranscriptSegment[];
+  // Phase 8: Enhanced transcript segments with IDs and topic linking
+  enhancedSegments?: EnhancedTranscriptSegment[];
+  // Phase 8: Scraped external resources from URLs in transcript
+  scrapedResources?: ScrapedResource[];
 }
 
 // Structured notes generated from video transcript
@@ -195,9 +216,17 @@ export interface ParsedTranscriptSegment {
   endTime: number;   // seconds
 }
 
+// Phase 8: Enhanced transcript segment with ID and topic linking
+export interface EnhancedTranscriptSegment extends ParsedTranscriptSegment {
+  id: string;              // Unique identifier for the segment
+  duration: number;        // Computed: endTime - startTime
+  speakerLabel?: string;   // Optional speaker identification
+  topicId?: string;        // Link to associated topic by timestamp overlap
+}
+
 // Processing state for session creation
 export interface ProcessingState {
-  step: 'fetching_video' | 'extracting_transcript' | 'building_knowledge' | 'generating_topics' | 'ready';
+  step: 'fetching_video' | 'extracting_transcript' | 'fetching_resources' | 'building_knowledge' | 'generating_topics' | 'ready';
   progress: number;
   message: string;
 }

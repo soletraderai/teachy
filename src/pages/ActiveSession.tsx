@@ -10,6 +10,7 @@ import CodeEditor from '../components/ui/CodeEditor';
 import CodePlayground from '../components/ui/CodePlayground';
 import MaterialIcon from '../components/ui/MaterialIcon';
 import EvaluationFeedback from '../components/ui/EvaluationFeedback';
+import QuestionSourceContext from '../components/ui/QuestionSourceContext';
 import { useHelpContext } from '../components/ui/SidebarLayout';
 import { useSessionStore } from '../stores/sessionStore';
 import { evaluateAnswer, RateLimitError, generateFallbackFeedback } from '../services/gemini';
@@ -716,6 +717,13 @@ export default function ActiveSession() {
                   Question
                 </h2>
                 <p className="text-text text-lg">{currentQuestion.text}</p>
+
+                {/* Phase 8.4: Show source context for contextual questions */}
+                <QuestionSourceContext
+                  question={currentQuestion}
+                  videoUrl={session.video?.url}
+                  scrapedResources={session.scrapedResources}
+                />
               </div>
 
             {/* Phase 7.6 F1: Code Editor ONLY for explicit code questions (isCodeQuestion === true) */}

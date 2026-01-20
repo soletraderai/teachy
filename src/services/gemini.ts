@@ -1,7 +1,8 @@
 // Gemini AI service for question generation and answer evaluation
 // Uses server-side proxy to protect API key
-import type { VideoMetadata, Topic, Question, ChatMessage, TutorPersonality, EvaluationResult } from '../types';
+import type { VideoMetadata, Topic, Question, ChatMessage, TutorPersonality, EvaluationResult, EnhancedTranscriptSegment, ScrapedResource } from '../types';
 import { useSettingsStore } from '../stores/settingsStore';
+import { formatSegmentsForPrompt } from './transcript';
 
 // Note: Transcript proxy (with AI) runs on 3002, API server runs on 3001
 const AI_PROXY_URL = 'http://localhost:3002/api/ai/generate';
@@ -466,12 +467,32 @@ function generateFallbackTopics(metadata: VideoMetadata): { topics: Topic[]; est
   };
 }
 
+// Phase 8: Options for topic generation
+export interface TopicGenerationOptions {
+  transcript?: string;
+  enhancedSegments?: EnhancedTranscriptSegment[];
+  scrapedResources?: ScrapedResource[];
+}
+
 // Generate topics and questions from video metadata
 // Phase 7: Updated with timestamps, question types, and anti-repetition instructions
+// Phase 8: Updated with source context requirements for contextual questions
 export async function generateTopicsFromVideo(
   metadata: VideoMetadata,
-  transcript?: string
+  transcriptOrOptions?: string | TopicGenerationOptions
 ): Promise<{ topics: Topic[]; estimatedDuration: number }> {
+  // Handle both old (string) and new (options object) signatures for backward compatibility
+  let transcript: string | undefined;
+  let enhancedSegments: EnhancedTranscriptSegment[] | undefined;
+  let scrapedResources: ScrapedResource[] | undefined;
+
+  if (typeof transcriptOrOptions === 'string') {
+    transcript = transcriptOrOptions;
+  } else if (transcriptOrOptions) {
+    transcript = transcriptOrOptions.transcript;
+    enhancedSegments = transcriptOrOptions.enhancedSegments;
+    scrapedResources = transcriptOrOptions.scrapedResources;
+  }
   // Detect if this is a programming/coding tutorial
   const isProgrammingTutorial = /\b(programming|coding|javascript|typescript|python|react|node|java|c\+\+|c#|rust|go|ruby|php|html|css|sql|api|backend|frontend|web dev|software|developer|code|tutorial)\b/i.test(metadata.title);
 
@@ -534,6 +555,50 @@ CRITICAL RULES:
 5. Vary question structure: don't use the same pattern twice
 6. Questions must TEST UNDERSTANDING of what the speaker said, not personal opinions or applications`;
 
+  // Phase 8: Source context requirements for contextual questions
+  const sourceContextInstructions = enhancedSegments && enhancedSegments.length > 0 ? `
+
+SOURCE CONTEXT REQUIREMENTS (CRITICAL):
+For EVERY question, you MUST include:
+1. "sourceQuote": An EXACT or close paraphrase quote from the transcript that this question is based on
+2. "sourceTimestamp": The timestamp (in seconds) where this content appears in the video
+3. "sourceSegmentId": The segment ID from the transcript (format: seg_XXX_X_XXXX)
+
+Example question with source context:
+{
+  "text": "According to the video, what are the three main benefits of X?",
+  "expectedAnswer": "The three main benefits are A, B, and C",
+  "questionType": "comprehension",
+  "isCodeQuestion": false,
+  "sourceQuote": "The three main benefits are speed, reliability, and cost-effectiveness",
+  "sourceTimestamp": 145,
+  "sourceSegmentId": "seg_145_3_benefits"
+}
+
+BANNED QUESTION TYPES (questions without clear source):
+- Generic recall: "What is the main topic of this video?"
+- Opinion-based: "What do you think about X?"
+- Application-based: "How would you apply X?"
+- Summary requests: "Summarize the key points"` : '';
+
+  // Phase 8: Include scraped resources in context
+  const resourcesContext = scrapedResources && scrapedResources.length > 0 ? `
+
+EXTERNAL RESOURCES REFERENCED IN VIDEO:
+${scrapedResources
+  .filter(r => !r.error)
+  .slice(0, 5)
+  .map(r => `- ${r.title} (${r.sourceType}): ${r.overview.slice(0, 200)}`)
+  .join('\n')}
+
+When generating questions, you may reference these external resources if the video mentions them.
+Include "relatedResourceIds" array if a question relates to a specific resource.` : '';
+
+  // Phase 8: Format enhanced segments for the prompt
+  const formattedSegments = enhancedSegments && enhancedSegments.length > 0
+    ? `\n\nTRANSCRIPT WITH TIMESTAMPS AND SEGMENT IDs:\n${formatSegmentsForPrompt(enhancedSegments, 60)}`
+    : '';
+
   const prompt = transcript
     ? `You are creating a comprehension quiz to test if someone UNDERSTOOD the content of this video.
 
@@ -542,7 +607,7 @@ Channel: ${metadata.channel}
 Video Duration: ${metadata.duration ? Math.floor(metadata.duration / 60) + ' minutes' : 'Unknown'}
 
 STEP 1: Read and understand the transcript:
-${transcript.slice(0, 15000)} ${transcript.length > 15000 ? '... (truncated)' : ''}
+${transcript.slice(0, 15000)} ${transcript.length > 15000 ? '... (truncated)' : ''}${formattedSegments}${resourcesContext}
 
 STEP 2: Identify 3-5 distinct topics/sections covered in the video.
 
@@ -563,7 +628,7 @@ BAD QUESTION EXAMPLES (NEVER use):
 - "How would you apply this in your work?" (tests application, not understanding)
 - "What best practices should you follow?" (generic, not from video)
 - "Why is this relevant to you?" (personal, not comprehension)
-${questionTypeInstructions}${codeQuestionInstructions}${timestampInstructions}${antiRepetitionRules}
+${questionTypeInstructions}${codeQuestionInstructions}${timestampInstructions}${antiRepetitionRules}${sourceContextInstructions}
 
 Format your response as JSON:
 {
@@ -579,7 +644,10 @@ Format your response as JSON:
           "text": "Question testing recall/understanding of specific content",
           "expectedAnswer": "The correct answer based on what the speaker said",
           "questionType": "comprehension",
-          "isCodeQuestion": false
+          "isCodeQuestion": false,
+          "sourceQuote": "Exact quote from transcript this question is based on",
+          "sourceTimestamp": 45,
+          "sourceSegmentId": "seg_45_2_example"
         }
       ]
     }
@@ -623,13 +691,18 @@ Format your response as JSON:
     const jsonStr = extractJson(response);
     const data = JSON.parse(jsonStr);
 
-    // Phase 7: Enhanced type for parsing AI response
+    // Phase 7 + Phase 8: Enhanced type for parsing AI response
     interface QuestionInput {
       text?: string;
       expectedAnswer?: string;
       questionType?: string;
       isCodeQuestion?: boolean;
       codeChallenge?: { template: string; language: string };
+      // Phase 8: Source context fields
+      sourceQuote?: string;
+      sourceTimestamp?: number;
+      sourceSegmentId?: string;
+      relatedResourceIds?: string[];
     }
 
     interface TopicInput {
@@ -648,7 +721,7 @@ Format your response as JSON:
     const topicCount = data.topics?.length || 3;
     const avgTopicDuration = videoDuration / topicCount;
 
-    // Transform to proper Topic format with Phase 7 enhancements
+    // Transform to proper Topic format with Phase 7 + Phase 8 enhancements
     const topics: Topic[] = data.topics.map((t: TopicInput, topicIndex: number) => ({
       id: generateId(),
       title: t.title,
@@ -670,6 +743,11 @@ Format your response as JSON:
           questionType: qObj.questionType as import('../types').QuestionType || 'comprehension',
           isCodeQuestion: qObj.isCodeQuestion || false,
           codeChallenge: qObj.codeChallenge,
+          // Phase 8: Source context fields
+          sourceQuote: qObj.sourceQuote,
+          sourceTimestamp: qObj.sourceTimestamp,
+          sourceSegmentId: qObj.sourceSegmentId,
+          relatedResourceIds: qObj.relatedResourceIds,
         };
       }),
       digDeeperConversation: null,
@@ -702,6 +780,212 @@ Format your response as JSON:
     console.log('Using fallback topic generation based on video metadata');
     return generateFallbackTopics(metadata);
   }
+}
+
+// ============================================================================
+// Phase 8: Question Validation and Regeneration
+// ============================================================================
+
+// Banned question patterns that indicate low-quality or non-contextual questions
+const BANNED_QUESTION_PATTERNS = [
+  /^what is the main (topic|message|point)/i,
+  /how would you apply/i,
+  /how might you use/i,
+  /what best practices should you/i,
+  /how is this relevant to you/i,
+  /what would you do with this knowledge/i,
+  /how could you implement this in your own/i,
+  /what skills will you develop/i,
+  /summarize the key points/i,
+  /what do you think about/i,
+  /in your opinion/i,
+  /how does this relate to your/i,
+];
+
+// Validation result interface
+export interface QuestionValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+/**
+ * Validate a question for Phase 8 requirements
+ * Checks for source context and banned patterns
+ */
+export function validateQuestion(question: Question, requireSourceContext: boolean = false): QuestionValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  // Check question text exists and has meaningful content
+  if (!question.text || question.text.trim().length < 10) {
+    errors.push('Question text is too short or empty');
+  }
+
+  // Check for banned patterns
+  for (const pattern of BANNED_QUESTION_PATTERNS) {
+    if (pattern.test(question.text)) {
+      errors.push(`Question matches banned pattern: "${pattern.source}"`);
+      break; // Only report first match
+    }
+  }
+
+  // Phase 8: Check for source context if required (when we have enhanced segments)
+  if (requireSourceContext) {
+    if (!question.sourceQuote || question.sourceQuote.trim().length < 5) {
+      warnings.push('Question missing sourceQuote - context may be unclear');
+    }
+
+    if (question.sourceTimestamp === undefined || question.sourceTimestamp < 0) {
+      warnings.push('Question missing sourceTimestamp - cannot link to video position');
+    }
+
+    if (!question.sourceSegmentId) {
+      warnings.push('Question missing sourceSegmentId - cannot track segment origin');
+    }
+  }
+
+  // Check for question mark (should end with ?)
+  if (!question.text.trim().endsWith('?')) {
+    warnings.push('Question should end with a question mark');
+  }
+
+  // Check for reasonable length
+  if (question.text.length > 500) {
+    warnings.push('Question is unusually long - consider simplifying');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
+/**
+ * Validate all questions in generated topics
+ * Returns summary of validation results
+ */
+export function validateGeneratedTopics(
+  topics: Topic[],
+  requireSourceContext: boolean = false
+): {
+  totalQuestions: number;
+  validQuestions: number;
+  invalidQuestions: number;
+  allErrors: Array<{ topicIndex: number; questionIndex: number; errors: string[] }>;
+  allWarnings: Array<{ topicIndex: number; questionIndex: number; warnings: string[] }>;
+} {
+  let totalQuestions = 0;
+  let validQuestions = 0;
+  let invalidQuestions = 0;
+  const allErrors: Array<{ topicIndex: number; questionIndex: number; errors: string[] }> = [];
+  const allWarnings: Array<{ topicIndex: number; questionIndex: number; warnings: string[] }> = [];
+
+  topics.forEach((topic, topicIndex) => {
+    topic.questions.forEach((question, questionIndex) => {
+      totalQuestions++;
+      const result = validateQuestion(question, requireSourceContext);
+
+      if (result.isValid) {
+        validQuestions++;
+      } else {
+        invalidQuestions++;
+        allErrors.push({ topicIndex, questionIndex, errors: result.errors });
+      }
+
+      if (result.warnings.length > 0) {
+        allWarnings.push({ topicIndex, questionIndex, warnings: result.warnings });
+      }
+    });
+  });
+
+  return {
+    totalQuestions,
+    validQuestions,
+    invalidQuestions,
+    allErrors,
+    allWarnings,
+  };
+}
+
+/**
+ * Regenerate an invalid question using AI
+ * Includes the reason for rejection in the prompt to guide better generation
+ */
+export async function regenerateInvalidQuestion(
+  topic: Topic,
+  invalidQuestion: Question,
+  validationErrors: string[],
+  transcript?: string,
+  maxRetries: number = 2
+): Promise<Question | null> {
+  const prompt = `You previously generated this question that failed validation:
+
+Topic: ${topic.title}
+Summary: ${topic.summary}
+Original Question: "${invalidQuestion.text}"
+
+VALIDATION ERRORS:
+${validationErrors.map(e => `- ${e}`).join('\n')}
+
+Generate a BETTER replacement question that:
+1. Tests COMPREHENSION of what the speaker said (not application or opinion)
+2. References SPECIFIC content from the topic
+3. Has a clear factual answer based on the video content
+4. Does NOT match any of these banned patterns:
+   - "What is the main topic/message?"
+   - "How would you apply..."
+   - "How is this relevant to you?"
+   - "What do you think about..."
+   - Personal application questions
+
+${transcript ? `\nRelevant transcript section:\n${transcript.slice(0, 2000)}` : ''}
+
+Return ONLY a JSON object with:
+{
+  "text": "Your improved question ending with ?",
+  "expectedAnswer": "The factual answer based on video content",
+  "questionType": "comprehension",
+  "sourceQuote": "Quote from transcript if available",
+  "sourceTimestamp": 0
+}`;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await callGemini(prompt);
+      const jsonStr = extractJson(response);
+      const parsed = JSON.parse(jsonStr);
+
+      const newQuestion: Question = {
+        id: generateId(),
+        text: parsed.text || invalidQuestion.text,
+        difficulty: invalidQuestion.difficulty || 'standard',
+        expectedAnswer: parsed.expectedAnswer,
+        userAnswer: null,
+        feedback: null,
+        answeredAt: null,
+        questionType: parsed.questionType || 'comprehension',
+        isCodeQuestion: false,
+        sourceQuote: parsed.sourceQuote,
+        sourceTimestamp: parsed.sourceTimestamp,
+      };
+
+      // Validate the regenerated question
+      const validation = validateQuestion(newQuestion, false);
+      if (validation.isValid) {
+        return newQuestion;
+      }
+
+      console.warn(`Regeneration attempt ${attempt} still invalid:`, validation.errors);
+    } catch (error) {
+      console.error(`Regeneration attempt ${attempt} failed:`, error);
+    }
+  }
+
+  // If all retries failed, return null
+  console.warn('All regeneration attempts failed, keeping original question');
+  return null;
 }
 
 // Get personality-aware openers for fallback feedback
@@ -898,12 +1182,23 @@ export async function evaluateAnswer(
     ? `\nExpected answer direction: ${question.expectedAnswer}`
     : '';
 
+  // Phase 8: Include source context in evaluation
+  const sourceContextSection = question.sourceQuote
+    ? `\n\nSOURCE CONTEXT FROM VIDEO:
+Quote: "${question.sourceQuote}"
+${question.sourceTimestamp !== undefined ? `Timestamp: ${Math.floor(question.sourceTimestamp / 60)}:${String(question.sourceTimestamp % 60).padStart(2, '0')}` : ''}
+
+When evaluating, check if the student's answer aligns with this source content from the video.
+If the answer contradicts the video content, mark it as FAIL.
+If the answer captures the key points from the source, mark it as PASS.`
+    : '';
+
   const prompt = `${personalityInstructions}
 
 You are an educational assistant evaluating a student's answer using a THREE-TIER system.
 
 Topic: ${topic.title}
-Context: ${topic.summary}${expectedHints}
+Context: ${topic.summary}${expectedHints}${sourceContextSection}
 
 Question: ${question.text}
 

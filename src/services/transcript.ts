@@ -3,7 +3,7 @@
  * Phase 7: Utilities for parsing and working with video transcripts
  */
 
-import { ParsedTranscriptSegment, TranscriptSegment } from '../types';
+import { ParsedTranscriptSegment, TranscriptSegment, EnhancedTranscriptSegment, Topic } from '../types';
 
 /**
  * Parse raw YouTube transcript segments into a standardized format
@@ -230,4 +230,188 @@ export function getExcerptAtTimestamp(
 
   const relevant = findRelevantSegments(segments, startTime, endTime, 5);
   return relevant.map((s) => s.text).join(' ');
+}
+
+// ============================================================================
+// Phase 8: Enhanced Transcript Segment Functions
+// ============================================================================
+
+/**
+ * Generate a unique ID for a transcript segment
+ * Format: seg_{startTime}_{hash} where hash is derived from text content
+ */
+export function generateSegmentId(segment: ParsedTranscriptSegment, index: number): string {
+  // Simple hash from text content for uniqueness
+  const textHash = segment.text
+    .slice(0, 20)
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase()
+    .slice(0, 8);
+
+  return `seg_${Math.floor(segment.startTime)}_${index}_${textHash}`;
+}
+
+/**
+ * Convert ParsedTranscriptSegments to EnhancedTranscriptSegments
+ * Adds unique IDs and computed duration
+ */
+export function enhanceSegments(
+  segments: ParsedTranscriptSegment[]
+): EnhancedTranscriptSegment[] {
+  return segments.map((segment, index) => ({
+    ...segment,
+    id: generateSegmentId(segment, index),
+    duration: segment.endTime - segment.startTime,
+  }));
+}
+
+/**
+ * Merge short segments (< minDuration seconds) with adjacent segments
+ * This improves question generation by providing more context per segment
+ */
+export function mergeShortSegments(
+  segments: EnhancedTranscriptSegment[],
+  minDuration: number = 5
+): EnhancedTranscriptSegment[] {
+  if (segments.length === 0) return [];
+  if (segments.length === 1) return segments;
+
+  const merged: EnhancedTranscriptSegment[] = [];
+  let currentSegment: EnhancedTranscriptSegment | null = null;
+
+  for (const segment of segments) {
+    if (currentSegment === null) {
+      currentSegment = { ...segment };
+      continue;
+    }
+
+    // If current accumulated segment is too short, merge with next
+    if (currentSegment.duration < minDuration) {
+      currentSegment = {
+        ...currentSegment,
+        text: `${currentSegment.text} ${segment.text}`,
+        endTime: segment.endTime,
+        duration: segment.endTime - currentSegment.startTime,
+        // Keep the original segment's ID
+      };
+    } else {
+      // Current segment is long enough, push it and start new
+      merged.push(currentSegment);
+      currentSegment = { ...segment };
+    }
+  }
+
+  // Don't forget the last segment
+  if (currentSegment) {
+    // If last segment is still too short, merge with previous if possible
+    if (currentSegment.duration < minDuration && merged.length > 0) {
+      const lastMerged = merged[merged.length - 1];
+      merged[merged.length - 1] = {
+        ...lastMerged,
+        text: `${lastMerged.text} ${currentSegment.text}`,
+        endTime: currentSegment.endTime,
+        duration: currentSegment.endTime - lastMerged.startTime,
+      };
+    } else {
+      merged.push(currentSegment);
+    }
+  }
+
+  return merged;
+}
+
+/**
+ * Link transcript segments to topics based on timestamp overlap
+ * Updates each segment's topicId field when it falls within a topic's time range
+ */
+export function linkSegmentsToTopics(
+  segments: EnhancedTranscriptSegment[],
+  topics: Topic[]
+): EnhancedTranscriptSegment[] {
+  return segments.map((segment) => {
+    // Find topic that best overlaps with this segment
+    let bestTopic: Topic | null = null;
+    let bestOverlap = 0;
+
+    for (const topic of topics) {
+      // Skip topics without timestamp information
+      if (topic.timestampStart === undefined || topic.timestampEnd === undefined) {
+        continue;
+      }
+
+      // Calculate overlap between segment and topic
+      const overlapStart = Math.max(segment.startTime, topic.timestampStart);
+      const overlapEnd = Math.min(segment.endTime, topic.timestampEnd);
+      const overlap = Math.max(0, overlapEnd - overlapStart);
+
+      if (overlap > bestOverlap) {
+        bestOverlap = overlap;
+        bestTopic = topic;
+      }
+    }
+
+    // Only link if there's meaningful overlap (at least 50% of segment duration)
+    const minOverlapRatio = 0.5;
+    if (bestTopic && bestOverlap >= segment.duration * minOverlapRatio) {
+      return {
+        ...segment,
+        topicId: bestTopic.id,
+      };
+    }
+
+    return segment;
+  });
+}
+
+/**
+ * Process raw transcript segments into enhanced segments ready for session storage
+ * This is the main entry point for Phase 8 transcript processing
+ */
+export function processTranscriptForSession(
+  rawSegments: TranscriptSegment[],
+  topics?: Topic[]
+): EnhancedTranscriptSegment[] {
+  // Step 1: Parse raw segments to get startTime/endTime
+  const parsed = parseTranscriptSegments(rawSegments);
+
+  // Step 2: Enhance with IDs and duration
+  const enhanced = enhanceSegments(parsed);
+
+  // Step 3: Merge short segments for better context
+  const merged = mergeShortSegments(enhanced);
+
+  // Step 4: Link to topics if provided
+  if (topics && topics.length > 0) {
+    return linkSegmentsToTopics(merged, topics);
+  }
+
+  return merged;
+}
+
+/**
+ * Get segments linked to a specific topic
+ */
+export function getSegmentsForTopic(
+  segments: EnhancedTranscriptSegment[],
+  topicId: string
+): EnhancedTranscriptSegment[] {
+  return segments.filter((segment) => segment.topicId === topicId);
+}
+
+/**
+ * Format segments for AI prompt inclusion
+ * Returns segments formatted as: [MM:SS-MM:SS] "text"
+ */
+export function formatSegmentsForPrompt(
+  segments: EnhancedTranscriptSegment[],
+  maxSegments: number = 50
+): string {
+  return segments
+    .slice(0, maxSegments)
+    .map((segment) => {
+      const start = formatTimestamp(segment.startTime);
+      const end = formatTimestamp(segment.endTime);
+      return `[${start}-${end}] "${segment.text}"`;
+    })
+    .join('\n');
 }

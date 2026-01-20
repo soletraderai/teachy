@@ -15,8 +15,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated AuthInitializer to wait for hydration before auth init
   - Added backend retry logic with tier preservation on failure
   - Files: `authStore.ts`, `ProfileTicket.tsx`, `App.tsx`
+- **Settings userName Persistence** (Phase 8):
+  - Fixed userName not persisting after page refresh
+  - Added useEffect sync to handle Zustand rehydration timing
+  - Files: `Settings.tsx`
 
 ### Added
+- **Contextual Question Generation** (Phase 8):
+  - Enhanced transcript segments with IDs, duration, speaker labels, and topic linking
+  - Short segment merging (segments < 5 seconds merged with adjacent)
+  - External resource scraping service (`resourceScraper.ts`)
+  - GitHub README and repo metadata scraping (no API key required)
+  - Web page content extraction with AI-powered summarization
+  - Rate limiting: 5 GitHub repos, 10 total resources, 1s delay between requests
+  - Source quote and timestamp fields on every question
+  - Question validation with banned patterns (opinion, generic theme, yes/no)
+  - `NoTranscriptWarning` component for videos without transcripts
+  - `QuestionSourceContext` component displaying source quote, timestamp badge, and related resources
+  - Clickable timestamp badges linking to video position (opens YouTube at timestamp)
+  - "Learn More" section with related external resources
+  - Answer evaluation now references source context in feedback
+  - New types: `EnhancedTranscriptSegment`, `ScrapedResource`
+  - New transcript functions: `generateSegmentId()`, `enhanceSegments()`, `mergeShortSegments()`, `linkSegmentsToTopics()`, `processTranscriptForSession()`, `formatSegmentsForPrompt()`
+  - New gemini functions: `validateQuestion()`, `validateGeneratedTopics()`, `regenerateInvalidQuestion()`
+  - `TopicGenerationOptions` interface for passing enhanced segments and scraped resources
 - TanStack Query integration for data fetching with automatic caching
 - Custom React hooks for Dashboard (`useCommitment`, `useLearningInsights`)
 - Custom React hooks for Goals (`useGoals`, `useGoalSuggestions`)
@@ -289,7 +311,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 0.7.0 | 2026-01-12 | Subscriptions | 169/415 (40.7%)* |
 | 0.8.0 | 2026-01-12 | Dashboard & Reviews | 290/415 (69.9%) |
 | 0.9.0 | 2026-01-13 | Pro features | 372/415 (89.6%) |
-| Unreleased | 2026-01-13 | Phases 0-8 (incl. Stripe) | ~411/415 (~99%) |
+| Unreleased | 2026-01-20 | Phase 8 Contextual Questions | ~415/415 (~100%) |
 
 *Note: Feature count increased from 302 to 415 during Phase 2 planning, causing apparent progress decrease.
 

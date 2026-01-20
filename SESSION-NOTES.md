@@ -70,3 +70,53 @@ brew services start redis
 **Status:** RESOLVED
 
 ---
+
+### 2026-01-20: Contextual Question Generation (Phase 8)
+
+**Goal:** Implement contextual question generation with source quotes, timestamps, and external resource scraping.
+
+**Changes Implemented:**
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 8.1 | Transcript Infrastructure | COMPLETE |
+| 8.2 | External Resource Scraping | COMPLETE |
+| 8.3 | Contextual Question Generation | COMPLETE |
+| 8.4 | UI Updates & Evaluation | COMPLETE |
+
+**New Files Created:**
+- `src/services/resourceScraper.ts` - GitHub and web page scraping with AI summarization
+- `src/components/ui/NoTranscriptWarning.tsx` - Warning for videos without transcripts
+- `src/components/ui/QuestionSourceContext.tsx` - Displays source quote, timestamp, and related resources
+
+**Key Changes:**
+
+| File | Change |
+|------|--------|
+| `src/types/index.ts` | Added `EnhancedTranscriptSegment`, `ScrapedResource`, Question source fields |
+| `src/services/transcript.ts` | Added segment ID generation, merging, topic linking, formatting for prompts |
+| `src/services/session.ts` | Integrated enhanced transcript processing before topic generation |
+| `src/services/gemini.ts` | Added `TopicGenerationOptions`, source context in prompts, question validation |
+| `src/pages/ActiveSession.tsx` | Integrated `QuestionSourceContext` component |
+| `src/pages/SessionOverview.tsx` | Integrated `NoTranscriptWarning` component |
+| `src/pages/Settings.tsx` | Fixed userName persistence bug with useEffect sync |
+
+**Features Delivered:**
+- [x] Enhanced transcript segments with IDs, duration, speaker labels, topic linking
+- [x] Short segment merging (< 5 seconds merged with adjacent)
+- [x] GitHub README and repo metadata scraping
+- [x] Web page content extraction and AI summarization
+- [x] Rate limiting (5 GitHub repos, 10 total resources, 1s delay)
+- [x] Source quote and timestamp on every question
+- [x] Question validation (banned patterns: opinion, generic theme, yes/no)
+- [x] Clickable timestamp badges linking to video position
+- [x] "Learn More" section with related external resources
+- [x] Answer evaluation references source context in feedback
+- [x] Settings userName persistence fix
+
+**Bug Fixes:**
+- Fixed userName not persisting after page refresh (React useState captured initial empty value before Zustand rehydration)
+
+**Status:** COMPLETE (pending manual testing)
+
+---

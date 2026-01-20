@@ -1,9 +1,9 @@
 // Session service for creating and managing learning sessions
-import type { Session, ProcessingState, VideoMetadata, KnowledgeBase } from '../types';
+import type { Session, ProcessingState, VideoMetadata, KnowledgeBase, TranscriptSegment, EnhancedTranscriptSegment } from '../types';
 import { extractVideoId, fetchVideoMetadata, fetchTranscript, combineTranscript } from './youtube';
-import { generateTopicsFromVideo } from './gemini';
+import { generateTopicsFromVideo, TopicGenerationOptions } from './gemini';
 import { buildKnowledgeBase, generateSampleSources } from './knowledgeBase';
-import { parseTranscriptSegments } from './transcript';
+import { parseTranscriptSegments, processTranscriptForSession, linkSegmentsToTopics } from './transcript';
 
 // Generate unique session ID
 export function generateSessionId(): string {
@@ -71,6 +71,13 @@ export async function createSession(
     knowledgeBase = generateSampleSources(metadata.title);
   }
 
+  // Phase 8: Process enhanced segments BEFORE topic generation so we can pass them to the AI
+  // This enables contextual question generation with source quotes and timestamps
+  let preProcessedSegments: EnhancedTranscriptSegment[] | undefined;
+  if (rawSegments.length > 0) {
+    preProcessedSegments = processTranscriptForSession(rawSegments as TranscriptSegment[]);
+  }
+
   // Step 5: Generate topics and questions using Gemini
   onProgress?.({
     step: 'generating_topics',
@@ -82,7 +89,13 @@ export async function createSession(
   let estimatedDuration;
 
   try {
-    const result = await generateTopicsFromVideo(metadata, transcript || undefined);
+    // Phase 8: Pass enhanced segments and knowledge base sources to topic generation
+    const options: TopicGenerationOptions = {
+      transcript: transcript || undefined,
+      enhancedSegments: preProcessedSegments,
+      // Note: scrapedResources will be added in a future update when resource scraping is integrated
+    };
+    const result = await generateTopicsFromVideo(metadata, options);
     topics = result.topics;
     estimatedDuration = result.estimatedDuration;
   } catch (error) {
@@ -105,6 +118,13 @@ export async function createSession(
   const transcriptSegments = rawSegments.length > 0
     ? parseTranscriptSegments(rawSegments)
     : undefined;
+
+  // Phase 8: Link pre-processed enhanced segments to topics now that we have both
+  // (preProcessedSegments were created before topic generation for AI context)
+  let enhancedSegments = preProcessedSegments;
+  if (enhancedSegments && topics.length > 0) {
+    enhancedSegments = linkSegmentsToTopics(enhancedSegments, topics);
+  }
 
   const session: Session = {
     id: generateSessionId(),
@@ -132,6 +152,8 @@ export async function createSession(
     transcript: transcript || undefined,  // Store transcript for note generation
     // Phase 7 F2: Store parsed transcript segments for help panel
     transcriptSegments,
+    // Phase 8: Store enhanced transcript segments with IDs and topic linking
+    enhancedSegments,
   };
 
   return session;

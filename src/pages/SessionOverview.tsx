@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Toast from '../components/ui/Toast';
+import NoTranscriptWarning from '../components/ui/NoTranscriptWarning';
 import { useSessionStore } from '../stores/sessionStore';
 import { formatDuration } from '../services/youtube';
 import { useDocumentTitle } from '../hooks';
@@ -195,6 +196,11 @@ export default function SessionOverview() {
           </div>
         </div>
       </Card>
+
+      {/* Phase 8: No Transcript Warning */}
+      {(!session.transcriptSegments || session.transcriptSegments.length === 0) && (
+        <NoTranscriptWarning />
+      )}
 
       {/* Topics Preview */}
       <Card>
