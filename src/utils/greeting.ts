@@ -53,7 +53,7 @@ export function getContextualGreeting(
   isFirstVisit: boolean
 ): string | null {
   if (isFirstVisit) {
-    return 'Welcome to Teachy.';
+    return 'Welcome to QuizTube.';
   }
 
   if (lastActiveAt) {

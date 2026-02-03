@@ -1,11 +1,22 @@
 # Changelog
 
-All notable changes to Teachy (QuizzTube) will be documented in this file.
+All notable changes to QuizTube will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Changed
+- **Phase 11: Rebrand from Teachy to QuizTube**
+  - Removed autonomous agent framework artifacts (features.db, prompts/, etc.)
+  - Updated package names: `youtube-learning-tool` → `quiztube`, `teachy-api` → `quiztube-api`
+  - Updated all localStorage keys with migration logic to preserve existing sessions
+  - Updated email branding (from address, templates, subjects)
+  - Updated Docker container names and network
+  - Updated CI/CD pipeline image names
+  - Updated environment variable examples
+  - Updated README and documentation
 
 ### Added
 - **Smarter Question Generation — Two-Stage Pipeline** (Phase 10):
@@ -337,5 +348,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Links
 
-- [Phase 1-2 Todo](../docs/phase-1-2-todo.md) - Current implementation plan
-- [Project Repository](https://github.com/your-org/teachy) - Source code
+- [Project Repository](https://github.com/soletraderai/quiztube) - Source code

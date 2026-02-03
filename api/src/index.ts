@@ -217,7 +217,7 @@ const startServer = async () => {
     startScheduler();
 
     app.listen(PORT, () => {
-      console.log(`Teachy API server running on port ${PORT}`);
+      console.log(`QuizTube API server running on port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     });
   } catch (error) {

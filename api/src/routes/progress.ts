@@ -199,7 +199,7 @@ router.get('/export', requirePro, async (req: AuthenticatedRequest, res: Respons
     if (format === 'json') {
       res.json(sessions);
     } else if (format === 'markdown') {
-      let markdown = '# Teachy Progress Export\n\n';
+      let markdown = '# QuizTube Progress Export\n\n';
 
       for (const session of sessions) {
         markdown += `## ${session.videoTitle}\n`;
@@ -217,7 +217,7 @@ router.get('/export', requirePro, async (req: AuthenticatedRequest, res: Respons
       }
 
       res.setHeader('Content-Type', 'text/markdown');
-      res.setHeader('Content-Disposition', 'attachment; filename="teachy-export.md"');
+      res.setHeader('Content-Disposition', 'attachment; filename="quiztube-export.md"');
       res.send(markdown);
     } else {
       res.status(400).json({ error: 'Invalid format' });

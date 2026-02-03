@@ -130,7 +130,16 @@ const tutorPersonalities: {
   },
 ];
 
-const ONBOARDING_STORAGE_KEY = 'teachy-onboarding-progress';
+// Migrate from old storage key to new one
+const OLD_ONBOARDING_KEY = 'teachy-onboarding-progress';
+const ONBOARDING_STORAGE_KEY = 'quiztube-onboarding-progress';
+if (typeof localStorage !== 'undefined') {
+  const oldData = localStorage.getItem(OLD_ONBOARDING_KEY);
+  if (oldData && !localStorage.getItem(ONBOARDING_STORAGE_KEY)) {
+    localStorage.setItem(ONBOARDING_STORAGE_KEY, oldData);
+    localStorage.removeItem(OLD_ONBOARDING_KEY);
+  }
+}
 
 interface OnboardingProgress {
   step: OnboardingStep;

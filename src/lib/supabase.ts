@@ -10,6 +10,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+// Migrate from old storage key to new one
+const OLD_SUPABASE_KEY = 'teachy-supabase-auth';
+const NEW_SUPABASE_KEY = 'quiztube-supabase-auth';
+if (typeof localStorage !== 'undefined') {
+  const oldData = localStorage.getItem(OLD_SUPABASE_KEY);
+  if (oldData && !localStorage.getItem(NEW_SUPABASE_KEY)) {
+    localStorage.setItem(NEW_SUPABASE_KEY, oldData);
+    localStorage.removeItem(OLD_SUPABASE_KEY);
+  }
+}
+
 // Create Supabase client for frontend
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
@@ -23,7 +34,7 @@ export const supabase = createClient(
       // Detect session from URL (for OAuth callbacks)
       detectSessionInUrl: true,
       // Storage key for session
-      storageKey: 'teachy-supabase-auth',
+      storageKey: 'quiztube-supabase-auth',
     },
   }
 );

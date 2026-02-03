@@ -17,12 +17,12 @@ const createFallbackTransporter = () => {
 
 const fallbackTransporter = !resend ? createFallbackTransporter() : null;
 
-const fromAddress = process.env.EMAIL_FROM || 'Teachy <noreply@teachy.app>';
+const fromAddress = process.env.EMAIL_FROM || 'QuizTube <noreply@quiztube.app>';
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // Generate unsubscribe token from user ID (simple hash)
 function generateUnsubscribeToken(userId: string): string {
-  const secret = process.env.JWT_SECRET || 'teachy-secret';
+  const secret = process.env.JWT_SECRET || 'quiztube-secret';
   return crypto.createHmac('sha256', secret).update(userId).digest('hex').slice(0, 32);
 }
 
@@ -113,11 +113,11 @@ function wrapInTemplate(content: string): string {
       <body>
         <div class="container">
           <div class="header">
-            <div class="logo">Teachy</div>
+            <div class="logo">QuizTube</div>
           </div>
           ${content}
           <div class="footer">
-            <p>&copy; ${new Date().getFullYear()} Teachy. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} QuizTube. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -138,7 +138,7 @@ export const sendVerificationEmail = async (email: string, token: string): Promi
     </div>
   `);
 
-  return sendEmail(email, 'Verify your Teachy email', html);
+  return sendEmail(email, 'Verify your QuizTube email', html);
 };
 
 export const sendPasswordResetEmail = async (email: string, token: string): Promise<EmailResult> => {
@@ -154,7 +154,7 @@ export const sendPasswordResetEmail = async (email: string, token: string): Prom
     </div>
   `);
 
-  return sendEmail(email, 'Reset your Teachy password', html);
+  return sendEmail(email, 'Reset your QuizTube password', html);
 };
 
 export const sendWeeklySummaryEmail = async (
@@ -200,7 +200,7 @@ export const sendWeeklySummaryEmail = async (
     </div>
   `);
 
-  return sendEmail(email, 'Your Teachy Weekly Summary', html);
+  return sendEmail(email, 'Your QuizTube Weekly Summary', html);
 };
 
 export const sendEmailPrompt = async (
@@ -234,7 +234,7 @@ export const sendEmailPrompt = async (
     email,
     `Quick question: ${topicName}`,
     html,
-    { 'X-Teachy-Prompt-Id': promptId }
+    { 'X-QuizTube-Prompt-Id': promptId }
   );
 };
 

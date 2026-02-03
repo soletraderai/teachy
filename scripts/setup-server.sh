@@ -1,13 +1,13 @@
 #!/bin/bash
 # ===========================================
-# Teachy Server Setup Script
+# QuizTube Server Setup Script
 # Run on a fresh DigitalOcean Ubuntu Droplet
 # ===========================================
 
 set -e
 
 echo "========================================="
-echo "Teachy Server Setup Script"
+echo "QuizTube Server Setup Script"
 echo "========================================="
 
 # Check if running as root
@@ -73,7 +73,7 @@ fi
 
 # Create deployment directory
 echo "Creating deployment directory..."
-DEPLOY_PATH="/home/deploy/teachy"
+DEPLOY_PATH="/home/deploy/quiztube"
 mkdir -p $DEPLOY_PATH
 chown deploy:deploy $DEPLOY_PATH
 

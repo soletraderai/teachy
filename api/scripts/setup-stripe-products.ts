@@ -1,7 +1,7 @@
 /**
  * Stripe Product Setup Script
  *
- * Run this script ONCE to create the Teachy Pro product and prices in Stripe.
+ * Run this script ONCE to create the QuizTube Pro product and prices in Stripe.
  *
  * Usage:
  *   npx ts-node scripts/setup-stripe-products.ts
@@ -27,29 +27,29 @@ if (!stripeKey || stripeKey === 'sk_test_placeholder') {
 const stripe = new Stripe(stripeKey);
 
 async function setupStripeProducts() {
-  console.log('🚀 Setting up Stripe products for Teachy...\n');
+  console.log('🚀 Setting up Stripe products for QuizTube...\n');
 
   try {
     // Check if product already exists
     const existingProducts = await stripe.products.list({ limit: 100 });
-    const existingPro = existingProducts.data.find(p => p.name === 'Teachy Pro');
+    const existingPro = existingProducts.data.find(p => p.name === 'QuizTube Pro');
 
     let product: Stripe.Product;
 
     if (existingPro) {
-      console.log('📦 Product "Teachy Pro" already exists:', existingPro.id);
+      console.log('📦 Product "QuizTube Pro" already exists:', existingPro.id);
       product = existingPro;
     } else {
-      // Create the Teachy Pro product
+      // Create the QuizTube Pro product
       product = await stripe.products.create({
-        name: 'Teachy Pro',
+        name: 'QuizTube Pro',
         description: 'Unlock unlimited learning sessions, AI-powered insights, timed challenges, and advanced analytics.',
         metadata: {
-          app: 'teachy',
+          app: 'quiztube',
           tier: 'pro',
         },
       });
-      console.log('✅ Created product "Teachy Pro":', product.id);
+      console.log('✅ Created product "QuizTube Pro":', product.id);
     }
 
     // Check for existing prices

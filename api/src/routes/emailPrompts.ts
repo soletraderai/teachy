@@ -7,7 +7,7 @@ const router = Router();
 
 // Generate unsubscribe token from user ID (simple hash)
 export function generateUnsubscribeToken(userId: string): string {
-  const secret = process.env.JWT_SECRET || 'teachy-secret';
+  const secret = process.env.JWT_SECRET || 'quiztube-secret';
   return crypto.createHmac('sha256', secret).update(userId).digest('hex').slice(0, 32);
 }
 

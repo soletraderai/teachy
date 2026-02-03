@@ -1,10 +1,10 @@
-# YouTube Learning Tool
+# QuizTube
 
 A React-based interactive learning application that transforms passive YouTube video consumption into active, retention-focused learning sessions.
 
 ## Overview
 
-This tool extracts video transcripts, builds enriched knowledge bases from referenced sources, and guides users through bite-sized Q&A sessions designed for kinesthetic learners.
+QuizTube extracts video transcripts, builds enriched knowledge bases from referenced sources, and guides users through bite-sized Q&A sessions designed for kinesthetic learners.
 
 ## Features
 
@@ -51,21 +51,27 @@ This application uses a **Neobrutalism** design aesthetic:
 ### Installation
 
 1. Clone the repository
-2. Run the setup script:
+2. Install dependencies:
 
 ```bash
-./init.sh
+npm install
+cd api && npm install && cd ..
+```
+
+3. Start development servers:
+
+```bash
+./start-dev.sh
 ```
 
 Or manually:
 
 ```bash
-npm install
 npm run dev
 ```
 
-3. Open http://localhost:5173 in your browser
-4. Navigate to Settings and configure your Gemini API key
+4. Open http://localhost:5173 in your browser
+5. Navigate to Settings and configure your Gemini API key
 
 ### Configuration
 
@@ -90,6 +96,7 @@ On first launch, you'll need to configure:
   /stores            # Zustand stores
   App.tsx
   main.tsx
+/api                 # Express.js backend API
 ```
 
 ## User Flow
@@ -114,7 +121,10 @@ During a learning session, you can:
 ## Development
 
 ```bash
-# Start development server
+# Start all development servers
+./start-dev.sh
+
+# Start frontend development server only
 npm run dev
 
 # Build for production

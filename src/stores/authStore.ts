@@ -3,6 +3,17 @@ import { persist } from 'zustand/middleware';
 import { supabase, supabaseAuth, isSupabaseConfigured } from '../lib/supabase';
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
+// Migrate from old storage key to new one
+const OLD_AUTH_KEY = 'teachy-auth';
+const NEW_AUTH_KEY = 'quiztube-auth';
+if (typeof localStorage !== 'undefined') {
+  const oldData = localStorage.getItem(OLD_AUTH_KEY);
+  if (oldData && !localStorage.getItem(NEW_AUTH_KEY)) {
+    localStorage.setItem(NEW_AUTH_KEY, oldData);
+    localStorage.removeItem(OLD_AUTH_KEY);
+  }
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -181,7 +192,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: 'teachy-auth',
+      name: 'quiztube-auth',
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,

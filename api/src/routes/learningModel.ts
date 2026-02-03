@@ -129,7 +129,7 @@ router.get('/export', async (req: AuthenticatedRequest, res: Response, next: Nex
     };
 
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', 'attachment; filename="teachy-data-export.json"');
+    res.setHeader('Content-Disposition', 'attachment; filename="quiztube-data-export.json"');
     res.json(exportData);
   } catch (error) {
     next(error);

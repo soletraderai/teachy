@@ -1,6 +1,6 @@
 #!/bin/bash
 # ===========================================
-# Teachy SSL Setup Script
+# QuizTube SSL Setup Script
 # Obtains and configures Let's Encrypt SSL certificate
 # ===========================================
 
@@ -12,7 +12,7 @@ EMAIL=${2:-""}
 
 if [ -z "$DOMAIN" ] || [ -z "$EMAIL" ]; then
   echo "Usage: ./setup-ssl.sh <domain> <email>"
-  echo "Example: ./setup-ssl.sh teachy.app admin@teachy.app"
+  echo "Example: ./setup-ssl.sh quiztube.app admin@quiztube.app"
   exit 1
 fi
 

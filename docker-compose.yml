@@ -3,24 +3,24 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: teachy-postgres
+    container_name: quiztube-postgres
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=teachy
-      - POSTGRES_PASSWORD=teachy_dev
-      - POSTGRES_DB=teachy
+      - POSTGRES_USER=quiztube
+      - POSTGRES_PASSWORD=quiztube_dev
+      - POSTGRES_DB=quiztube
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U teachy -d teachy"]
+      test: ["CMD-SHELL", "pg_isready -U quiztube -d quiztube"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: teachy-redis
+    container_name: quiztube-redis
     ports:
       - "6379:6379"
     healthcheck:
@@ -31,7 +31,7 @@ services:
 
   mailhog:
     image: mailhog/mailhog
-    container_name: teachy-mailhog
+    container_name: quiztube-mailhog
     ports:
       - "1025:1025"  # SMTP
       - "8025:8025"  # Web UI
@@ -42,7 +42,7 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile
-    container_name: teachy-api
+    container_name: quiztube-api
     ports:
       - "3001:3001"
     depends_on:
@@ -53,7 +53,7 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3001
-      - DATABASE_URL=postgresql://teachy:teachy_dev@postgres:5432/teachy
+      - DATABASE_URL=postgresql://quiztube:quiztube_dev@postgres:5432/quiztube
       - REDIS_URL=redis://redis:6379
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}

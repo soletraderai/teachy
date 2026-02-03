@@ -1,5 +1,5 @@
 # ===========================================
-# Teachy CI/CD Pipeline
+# QuizTube CI/CD Pipeline
 # Automated testing, building, and deployment
 # ===========================================
 
@@ -25,8 +25,8 @@ on:
 
 env:
   DOCKER_REGISTRY: ghcr.io
-  IMAGE_NAME_API: ${{ github.repository }}/teachy-api
-  IMAGE_NAME_FRONTEND: ${{ github.repository }}/teachy-frontend
+  IMAGE_NAME_API: ${{ github.repository }}/quiztube-api
+  IMAGE_NAME_FRONTEND: ${{ github.repository }}/quiztube-frontend
 
 jobs:
   # ===========================================

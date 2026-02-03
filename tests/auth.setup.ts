@@ -1,7 +1,7 @@
 import { test as setup, expect } from '@playwright/test';
 
 // Test user credentials from .env
-const TEST_USER_EMAIL = process.env.TEST_USER_EMAIL || 'test-admin@teachy.local';
+const TEST_USER_EMAIL = process.env.TEST_USER_EMAIL || 'test-admin@quiztube.local';
 const TEST_USER_PASSWORD = process.env.TEST_USER_PASSWORD || 'TestAdmin123!';
 
 const authFile = 'tests/.auth/user.json';

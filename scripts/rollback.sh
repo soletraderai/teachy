@@ -1,18 +1,18 @@
 #!/bin/bash
 # ===========================================
-# Teachy Rollback Script
+# QuizTube Rollback Script
 # Reverts to a previous deployment
 # ===========================================
 
 set -e
 
 # Configuration
-DEPLOY_PATH=${DEPLOY_PATH:-"/home/deploy/teachy"}
+DEPLOY_PATH=${DEPLOY_PATH:-"/home/deploy/quiztube"}
 ROLLBACK_COMMITS=${1:-1}
 SKIP_SMOKE_TEST=${2:-false}
 
 echo "========================================="
-echo "Teachy Rollback Script"
+echo "QuizTube Rollback Script"
 echo "========================================="
 echo "Deploy Path: $DEPLOY_PATH"
 echo "Commits to rollback: $ROLLBACK_COMMITS"

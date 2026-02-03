@@ -336,7 +336,7 @@ router.post('/email-inbound', express.json(), async (req: Request, res: Response
     const { from, subject, text, headers } = req.body;
 
     // Extract prompt ID from headers or subject
-    const promptId = headers?.['x-teachy-prompt-id'];
+    const promptId = headers?.['x-quiztube-prompt-id'] || headers?.['x-teachy-prompt-id']; // Support both during migration
 
     if (!promptId) {
       console.log('Email received without prompt ID, ignoring');
