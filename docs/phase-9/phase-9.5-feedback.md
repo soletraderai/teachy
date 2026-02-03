@@ -1,0 +1,2 @@
+- The top bar is to have a white solid background.
+- The top bar is to span 100% of that window. So it is to go from the sidebar to the right-hand side and we need to ensure that as the sidebar minimises or the window changes that it's completely responsive.

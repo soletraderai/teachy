@@ -1,6 +1,6 @@
 #!/bin/bash
 # ===========================================
-# Teachy Smoke Test Script
+# QuizTube Smoke Test Script
 # Verifies deployment health after deployment
 # ===========================================
 
@@ -13,7 +13,7 @@ MAX_RETRIES=${MAX_RETRIES:-5}
 RETRY_DELAY=${RETRY_DELAY:-10}
 
 echo "========================================="
-echo "Teachy Smoke Tests"
+echo "QuizTube Smoke Tests"
 echo "========================================="
 echo "Site URL: $SITE_URL"
 echo "API URL: $API_URL"
