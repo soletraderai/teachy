@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Smarter Question Generation — Two-Stage Pipeline** (Phase 10):
+  - Stage 1: `analyzeTranscriptContent()` extracts 5-12 structured concepts with Bloom's Taxonomy and Webb's DOK mappings
+  - Concept relationships (depends-on, contrasts-with, example-of, part-of, leads-to)
+  - Misconception identification per concept for targeted questions
+  - Thematic content sections with timestamp ranges and complexity levels
+  - Stage 2: Analysis-aware question generation prompt consuming structured `ContentAnalysis` JSON
+  - Cognitive distribution enforcement: ~40% remember/understand, ~30% apply/analyze, ~20% evaluate/create, ~10% misconception-targeted
+  - Misconception-targeted questions that reveal common learner confusions
+  - Synthesis questions using concept relationships
+  - New pipeline Step 4.5 in `createSession()` between knowledge base and topic generation
+  - New `'analyzing_content'` processing state with progress UI at 60%
+  - Silent fallback: Stage 1 failure proceeds with existing single-stage generation
+  - `RateLimitError` handling: skips content analysis without retry
+  - New types: `BloomLevel`, `DOKLevel`, `ExtractedConcept`, `ConceptRelationship`, `ContentSection`, `ContentAnalysis`
+  - `contentAnalysis` stored on Session object for future use by dig-deeper, answer evaluation, etc.
+
 ### Fixed
 - **Pro Tier Display Race Condition** (Phase 6 - 6th attempt):
   - Fixed `isLoading: false` initial state causing premature render
@@ -312,6 +329,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 0.8.0 | 2026-01-12 | Dashboard & Reviews | 290/415 (69.9%) |
 | 0.9.0 | 2026-01-13 | Pro features | 372/415 (89.6%) |
 | Unreleased | 2026-01-20 | Phase 8 Contextual Questions | ~415/415 (~100%) |
+| Unreleased | 2026-02-03 | Phase 10 Two-Stage Question Pipeline | ~415/415 (~100%) |
 
 *Note: Feature count increased from 302 to 415 during Phase 2 planning, causing apparent progress decrease.
 
