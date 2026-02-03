@@ -120,3 +120,34 @@ brew services start redis
 **Status:** COMPLETE (pending manual testing)
 
 ---
+
+### 2026-02-03: Smarter Question Generation (Phase 10)
+
+**Goal:** Transform question generation from single-shot to a research-backed two-stage pipeline that separates content analysis from question generation.
+
+**Changes Implemented:**
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 10.1 | Types & Content Analysis Engine | COMPLETE |
+| 10.2 | Analysis-Aware Question Generation | COMPLETE |
+| 10.3 | Pipeline Integration & Fallback | COMPLETE |
+| 10.4 | Validation & Quality Assurance | PENDING |
+
+**Key Changes:**
+
+| File | Change |
+|------|--------|
+| `src/types/index.ts` | Added `BloomLevel`, `DOKLevel`, `ExtractedConcept`, `ConceptRelationship`, `ContentSection`, `ContentAnalysis` types; updated `Session` and `ProcessingState` |
+| `src/services/gemini.ts` | Added `analyzeTranscriptContent()` (Stage 1), analysis-aware prompt (Stage 2) with cognitive distribution, updated `TopicGenerationOptions` |
+| `src/services/session.ts` | Inserted Step 4.5 in `createSession()`, wired content analysis into pipeline, silent fallback on failure, adjusted progress percentages |
+
+**Architecture:**
+- **Stage 1:** `analyzeTranscriptContent()` — extracts 5-12 concepts with Bloom's/DOK mappings, relationships, misconceptions (temp=0.3, 12s timeout, 2 retries)
+- **Stage 2:** Modified `generateTopicsFromVideo()` — uses structured `ContentAnalysis` JSON instead of raw transcript when available
+- **Fallback:** Stage 1 failure silently falls back to existing single-stage generation; `RateLimitError` skips without retry
+- **Cognitive distribution:** ~40% remember/understand, ~30% apply/analyze, ~20% evaluate/create, ~10% misconception-targeted
+
+**Status:** IN PROGRESS (implementation complete, manual testing pending)
+
+---
